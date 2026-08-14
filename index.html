@@ -572,11 +572,12 @@ const CONFIG = {
      musicLoopSeconds is the loop's true length — MP3 encoding pads the
      end by a few dozen milliseconds, and without an explicit loop point
      you hear that padding as a gap on every repeat. This loop is
-     4 bars at 120 BPM, so exactly 8 seconds.
-     Swap to fairy-harp.wav if you ever hear a seam; it has no padding
+     8 bars at 140 BPM, so 13.714286 seconds — keep the decimals, a
+     rounded value drifts audibly after a few repeats.
+     Swap to fairy-tales.wav if you ever hear a seam; it has no padding
      at all, just a bigger file. */
-  musicFile        : "music/fairy-harp.mp3",
-  musicLoopSeconds : 8,
+  musicFile        : "music/fairy-tales.mp3",
+  musicLoopSeconds : 13.714286,
   musicVolume      : 0.55
 };
 </script>
