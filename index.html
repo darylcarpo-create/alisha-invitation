@@ -726,10 +726,6 @@ const CONFIG = {
       <p class="body" style="margin-bottom:26px" id="rsvpIntro"></p>
       <div class="form">
         <div class="field">
-          <label for="f-name">Your name</label>
-          <input id="f-name" type="text" autocomplete="name" placeholder="Maria Santos">
-        </div>
-        <div class="field">
           <label>Will you celebrate with us?</label>
           <div class="choice" id="attend">
             <button type="button" data-v="yes" aria-pressed="false">Joyfully accepts</button>
@@ -1463,8 +1459,9 @@ function showHandoff(body, copied){
 (function(){
   let attending=null;
   const btns=[...document.querySelectorAll('#attend button')];
-  const send=$('sendRsvp'), nameI=$('f-name'), gField=$('guestsField');
-  const validate=()=>{send.disabled=!(attending&&nameI.value.trim().length>1)};
+  const send=$('sendRsvp'), gField=$('guestsField');
+  /* Messenger already tells us who sent it, so there's no name to ask for */
+  const validate=()=>{send.disabled=!attending};
 
   btns.forEach(b=>b.addEventListener('click',()=>{
     attending=b.dataset.v;
@@ -1472,11 +1469,9 @@ function showHandoff(body, copied){
     gField.style.display = attending==='yes'?'':'none';
     validate();
   }));
-  nameI.addEventListener('input',validate);
 
   send.addEventListener('click',()=>{
     const data={
-      name     : nameI.value.trim(),
       attending: attending==='yes'?'Yes':'No',
       guests   : attending==='yes' ? $('f-guests').value : '0',
       message  : $('f-msg').value.trim(),
@@ -1485,14 +1480,13 @@ function showHandoff(body, copied){
     };
     const body=[
       `RSVP — ${data.event}`,
-      `Name: ${data.name}`,
       `Attending: ${data.attending}`,
       data.attending==='Yes'?`Guests: ${data.guests}`:null,
       data.message?`Message: ${data.message}`:null
     ].filter(Boolean).join('\n');
 
     const done=t=>{send.textContent=t;setTimeout(()=>{send.textContent='Send my RSVP'},5000)};
-    const title=`RSVP — ${data.name} (${data.attending})`;
+    const title=`RSVP — ${data.attending}`;
 
     switch(CONFIG.rsvpMode){
       case 'messenger':{
