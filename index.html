@@ -1474,47 +1474,53 @@ function showHandoff(body, copied){
 const Music=(function(){
   let ctx,master,pad,padOsc=[],lookahead=null,bar=0,nextBarAt=0,on=false;
 
-  const BPM=138, BEAT=60/BPM, BAR=BEAT*3;   // 3/4 — a waltz
+  const BPM=84, BEAT=60/BPM, BAR=BEAT*4;
   const SCHED_AHEAD=0.35;   // seconds of audio queued in advance
   const TICK=40;            // ms between scheduler wake-ups
 
-  /* A music-box waltz in D major — the storybook garden-party feel the
-     cake is going for: sweet rather than grand, and the 3/4 lilt does
-     most of the work. An eight-bar phrase, so it doesn't loop obviously.
+  /* Magical rather than metrical.
 
-     Oom-pah-pah: bass on beat one, a light chord pluck on two and three. */
+     The waltz read as off-beat because a plucked chord on beats two and
+     three sets up a firm pulse, and any melody note landing between
+     those beats fights it. So there is no plucked pulse here at all:
+     a harp arpeggio runs continuously underneath, and every melody note
+     lands squarely on a beat. With nothing marking time percussively
+     there is no beat to be off.
+
+     Major sevenths throughout — that suspended, unresolved colour is
+     what makes a chord sound enchanted rather than merely cheerful. */
   const CH=[
-    {root:38, arp:[62,66,69]},   // D
-    {root:38, arp:[62,66,69]},   // D
-    {root:31, arp:[62,67,71]},   // G
-    {root:38, arp:[62,66,69]},   // D
-    {root:35, arp:[62,66,71]},   // Bm
-    {root:31, arp:[62,67,71]},   // G
-    {root:33, arp:[61,64,69]},   // A
-    {root:38, arp:[62,66,69]}    // D
+    {root:38, arp:[62,66,69,73]},   // Dmaj7
+    {root:35, arp:[62,66,69,74]},   // Bm7
+    {root:31, arp:[62,67,71,74]},   // Gmaj7
+    {root:33, arp:[61,64,69,73]},   // A
+    {root:38, arp:[62,66,69,73]},   // Dmaj7
+    {root:30, arp:[64,69,73,76]},   // F#m7
+    {root:31, arp:[62,67,71,74]},   // Gmaj7
+    {root:33, arp:[62,64,69,73]}    // Asus4 — leaves the phrase open
   ];
-  /* six subdivisions per bar; null is a rest, and the rests are what
-     give it the lilt rather than a march */
+  /* Eight subdivisions per bar, but notes only ever on the four beats.
+     The odd slots stay empty by design, not by accident. */
   const MEL=[
-    [78,null,81,83,null,81],
-    [83,null,86,83,null,81],
-    [79,null,83,86,null,83],
-    [81,null,78,81,null,null],
-    [83,null,86,88,null,86],
-    [86,null,83,79,null,83],
-    [85,null,81,78,null,76],
-    [74,null,78,81,null,null]
+    [81,null,83,null,86,null,83,null],
+    [81,null,78,null,81,null,83,null],
+    [86,null,83,null,79,null,83,null],
+    [85,null,81,null,78,null,76,null],
+    [81,null,83,null,86,null,88,null],
+    [88,null,85,null,81,null,85,null],
+    [86,null,83,null,79,null,83,null],
+    [81,null,78,null,74,null,null,null]
   ];
-  /* a soft glockenspiel echo a third above, only on the phrase turns */
+  /* a distant bell answering at the end of each phrase */
   const TOP=[
-    [null,null,null,null,null,88],
-    [null,null,null,null,null,86],
-    [null,null,null,null,null,90],
-    [null,null,null,null,null,null],
-    [null,null,null,null,null,93],
-    [null,null,null,null,null,88],
-    [null,null,null,null,null,85],
-    [null,null,null,null,null,null]
+    [null,null,null,null,null,null,null,93],
+    [null,null,null,null,null,null,null,null],
+    [null,null,null,null,null,null,null,95],
+    [null,null,null,null,null,null,null,null],
+    [null,null,null,null,null,null,null,93],
+    [null,null,null,null,null,null,null,null],
+    [null,null,null,null,null,null,null,90],
+    [null,null,null,null,null,null,null,null]
   ];
   const hz=n=>440*Math.pow(2,(n-69)/12);
 
@@ -1547,48 +1553,33 @@ const Music=(function(){
     o.start(t);o.stop(t+dur+.02);
   }
 
-  /* short plucked chord — the bounce on beats 2 and 4 */
-  function pizz(t,f,g){
-    const o=ctx.createOscillator(),flt=ctx.createBiquadFilter(),v=ctx.createGain();
-    o.type='triangle';o.frequency.value=f;
-    flt.type='lowpass';
-    flt.frequency.setValueAtTime(f*9,t);
-    flt.frequency.exponentialRampToValueAtTime(f*2,t+.09);
-    v.gain.setValueAtTime(0,t);
-    v.gain.linearRampToValueAtTime(g,t+.006);
-    v.gain.exponentialRampToValueAtTime(.0001,t+.28);
-    o.connect(flt);flt.connect(v);v.connect(master);
-    o.start(t);o.stop(t+.3);
-  }
-
   const sparkle=t=>celesta(t,hz(86+((Math.random()*12)|0)),.026,1.3);
 
   /* Everything below is scheduled against ctx.currentTime, never against
      wall-clock time, so a busy main thread can no longer nudge the beat. */
   function scheduleBar(t0){
     const c=CH[bar%CH.length], m=MEL[bar%MEL.length], tp=TOP[bar%TOP.length];
-    const sub=BAR/6;
+    const sub=BAR/8;
 
-    /* oom — the bass note, alone on beat one */
-    harp(t0, hz(c.root-12), .08, 1.5);
+    /* a harp rolling continuously through the chord — this carries the
+       motion, so nothing has to keep time by hitting hard */
+    const rollUp=[0,1,2,3,2,1,0,1], rollDn=[3,2,1,0,1,2,3,2];
+    const roll = (bar%2) ? rollDn : rollUp;
+    for(let i=0;i<8;i++) harp(t0+i*sub, hz(c.arp[roll[i]]-12), .04, 1.6);
 
-    /* pah-pah — light chord plucks on beats two and three, the notes
-       spread by a few milliseconds so they sound strummed, not stabbed */
-    [1,2].forEach(b=>{
-      const t=t0+b*BEAT;
-      c.arp.forEach((n,i)=>pizz(t+i*.008, hz(n-12), .042));
-    });
+    /* the root underneath, long and soft */
+    harp(t0, hz(c.root-12), .07, 3.2);
 
-    /* melody on the music box, with the glockenspiel echo above */
-    for(let i=0;i<6;i++) if(m[i]!==null)  celesta(t0+i*sub, hz(m[i]),  .09,  1.5);
-    for(let i=0;i<6;i++) if(tp[i]!==null) celesta(t0+i*sub, hz(tp[i]), .034, 1.1);
+    /* melody, always on a beat, ringing well past the next note */
+    for(let i=0;i<8;i++) if(m[i]!==null)  celesta(t0+i*sub, hz(m[i]),  .095, 2.4);
+    for(let i=0;i<8;i++) if(tp[i]!==null) celesta(t0+i*sub, hz(tp[i]), .038, 2.8);
 
-    /* a single grace note on the way into each new phrase */
-    if(bar%8===7) celesta(t0+5*sub, hz(m[0]+12), .03, .9);
+    padOsc.forEach((o,i)=>o.frequency.setTargetAtTime(hz(c.arp[i%c.arp.length]-24), t0, .55));
 
-    padOsc.forEach((o,i)=>o.frequency.setTargetAtTime(hz(c.arp[i%c.arp.length]-24), t0, .45));
-
-    if(bar%2===0) sparkle(t0+Math.random()*BAR);
+    /* wind chimes drifting, deliberately unquantised so they read as
+       atmosphere rather than as part of the rhythm */
+    sparkle(t0+Math.random()*BAR);
+    if(Math.random()<.45) sparkle(t0+Math.random()*BAR);
 
     bar++;
   }
@@ -1608,18 +1599,18 @@ const Music=(function(){
     master=ctx.createGain();
     master.gain.value=0;
 
-    const rev=ctx.createConvolver(),len=(ctx.sampleRate*1.8)|0,buf=ctx.createBuffer(2,len,ctx.sampleRate);
+    const rev=ctx.createConvolver(),len=(ctx.sampleRate*3.4)|0,buf=ctx.createBuffer(2,len,ctx.sampleRate);
     for(let ch=0;ch<2;ch++){
       const d=buf.getChannelData(ch);
-      for(let i=0;i<len;i++) d[i]=(Math.random()*2-1)*Math.pow(1-i/len,3.4);
+      for(let i=0;i<len;i++) d[i]=(Math.random()*2-1)*Math.pow(1-i/len,2.4);
     }
     rev.buffer=buf;
-    const wet=ctx.createGain();wet.gain.value=.26;
+    const wet=ctx.createGain();wet.gain.value=.44;
     master.connect(ctx.destination);
     master.connect(rev);rev.connect(wet);wet.connect(ctx.destination);
 
-    pad=ctx.createGain();pad.gain.value=.014;
-    const pf=ctx.createBiquadFilter();pf.type='lowpass';pf.frequency.value=1400;
+    pad=ctx.createGain();pad.gain.value=.019;
+    const pf=ctx.createBiquadFilter();pf.type='lowpass';pf.frequency.value=1050;
     pad.connect(pf);pf.connect(master);
     const breath=ctx.createOscillator(),bg=ctx.createGain();
     breath.frequency.value=.12;bg.gain.value=.007;
@@ -1652,7 +1643,7 @@ const Music=(function(){
       nextBarAt=ctx.currentTime+.15;
       master.gain.cancelScheduledValues(ctx.currentTime);
       master.gain.setValueAtTime(0,ctx.currentTime);
-      master.gain.linearRampToValueAtTime(.5,ctx.currentTime+1.4);
+      master.gain.linearRampToValueAtTime(.5,ctx.currentTime+2.6);
       pump();
       lookahead=setInterval(pump,TICK);
       return true;
