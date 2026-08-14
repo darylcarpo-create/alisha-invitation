@@ -558,7 +558,12 @@ const CONFIG = {
      "content not available", you don't have one, or it differs from
      your profile URL.
 
-     messengerId is the reliable route and always works. To find it:
+     On iOS, messengerId is REQUIRED, not optional — without it the
+     button can only use a web link, and iOS may route that to the App
+     Store instead of the app. With it, the page opens Messenger through
+     its own URL scheme and bypasses the problem.
+
+     To find it:
      open your Facebook profile in a desktop browser, view source
      (Ctrl+U) and search for "userID" or "profile_id" — it's a long
      number. Or use findmyfbid.in. Set it and it takes priority.
@@ -1402,6 +1407,32 @@ function copySync(text){
    resolves, so prefer it when supplied. */
 const messengerURL = ()=>'https://m.me/'+encodeURIComponent(CONFIG.messengerId||CONFIG.messengerUser);
 
+const IS_IOS = /iPad|iPhone|iPod/.test(navigator.userAgent)
+            || (navigator.platform==='MacIntel' && navigator.maxTouchPoints>1);
+
+/* iOS sends m.me links to the App Store when its Universal Link handoff
+   isn't firing -- which happens once you've ever tapped the "Safari"
+   breadcrumb on that domain, since iOS then remembers to keep the domain
+   in the browser forever. Safari has no way to undo that from a page.
+
+   The custom scheme sidesteps Universal Links entirely and opens the app
+   directly. It needs the numeric id, not a username. If the app doesn't
+   pick it up within a moment or so, we fall back to the web link. */
+function openMessenger(e){
+  if(!IS_IOS || !CONFIG.messengerId) return;      // plain href handles it
+  e.preventDefault();
+  const web=messengerURL();
+  let gone=false;
+  const mark=()=>{ gone=true; };
+  document.addEventListener('visibilitychange',mark,{once:true});
+  window.addEventListener('pagehide',mark,{once:true});
+  window.location.href='fb-messenger://user-thread/'+encodeURIComponent(CONFIG.messengerId);
+  setTimeout(()=>{
+    document.removeEventListener('visibilitychange',mark);
+    if(!gone && !document.hidden) window.location.href=web;   // app didn't take it
+  },1500);
+}
+
 function showHandoff(body, copied){
   const url=messengerURL();
   const wrap=document.querySelector('#rsvp .form');
@@ -1416,6 +1447,7 @@ function showHandoff(body, copied){
         Messenger not opening? <a href="${url}" class="ho-alt">Use this link</a> or search
         <b>${esc(CONFIG.messengerUser)}</b> in Messenger.</p>
     </div>`;
+  wrap.querySelectorAll('.ho-open,.ho-alt').forEach(a=>a.addEventListener('click',openMessenger));
   const t=document.getElementById('hoText');
   document.getElementById('hoCopy').addEventListener('click',e=>{
     const ok=copySync(body);
