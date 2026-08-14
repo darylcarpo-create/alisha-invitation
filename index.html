@@ -1163,7 +1163,11 @@ const REDUCED = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 /* SMIL keeps running even when the CSS is suppressed, so it has to be
    paused explicitly. pauseAnimations lives on the <svg> root. */
-let motionOn = !REDUCED;
+/* On by default. A phone with Reduce Motion or battery saver on reports
+   prefers-reduced-motion system-wide, which is rarely a deliberate choice
+   about this page, so the invitation animates regardless. The toggle stays
+   available for anyone who does want it still. */
+let motionOn = true;
 function applyMotion(){
   document.documentElement.classList.toggle('motion-on', motionOn);
   document.querySelectorAll('svg').forEach(sv=>{
@@ -1470,32 +1474,47 @@ function showHandoff(body, copied){
 const Music=(function(){
   let ctx,master,pad,padOsc=[],lookahead=null,bar=0,nextBarAt=0,on=false;
 
-  const BPM=112, BEAT=60/BPM, BAR=BEAT*4;
+  const BPM=138, BEAT=60/BPM, BAR=BEAT*3;   // 3/4 — a waltz
   const SCHED_AHEAD=0.35;   // seconds of audio queued in advance
   const TICK=40;            // ms between scheduler wake-ups
 
-  /* Bright D major, I–V–vi–IV — the plainly happy progression, played
-     briskly with a skipping rhythm rather than a drifting one. */
+  /* A music-box waltz in D major — the storybook garden-party feel the
+     cake is going for: sweet rather than grand, and the 3/4 lilt does
+     most of the work. An eight-bar phrase, so it doesn't loop obviously.
+
+     Oom-pah-pah: bass on beat one, a light chord pluck on two and three. */
   const CH=[
-    {root:38, arp:[62,66,69,74]},   // D
-    {root:33, arp:[61,64,69,73]},   // A/C#
-    {root:35, arp:[62,66,71,74]},   // Bm
-    {root:31, arp:[62,67,71,74]}    // G
+    {root:38, arp:[62,66,69]},   // D
+    {root:38, arp:[62,66,69]},   // D
+    {root:31, arp:[62,67,71]},   // G
+    {root:38, arp:[62,66,69]},   // D
+    {root:35, arp:[62,66,71]},   // Bm
+    {root:31, arp:[62,67,71]},   // G
+    {root:33, arp:[61,64,69]},   // A
+    {root:38, arp:[62,66,69]}    // D
   ];
-  /* 8 eighths per bar. Fuller and more stepwise than before — it skips
-     upward and lands on the beat, which is what reads as celebratory. */
+  /* six subdivisions per bar; null is a rest, and the rests are what
+     give it the lilt rather than a march */
   const MEL=[
-    [78,81,83,86,83,81,83,null],
-    [85,83,81,78,76,78,81,null],
-    [83,86,88,86,83,81,83,null],
-    [81,83,86,83,81,78,74,null]
+    [78,null,81,83,null,81],
+    [83,null,86,83,null,81],
+    [79,null,83,86,null,83],
+    [81,null,78,81,null,null],
+    [83,null,86,88,null,86],
+    [86,null,83,79,null,83],
+    [85,null,81,78,null,76],
+    [74,null,78,81,null,null]
   ];
-  /* a chirpy counter-line an octave up, only on the offbeats */
+  /* a soft glockenspiel echo a third above, only on the phrase turns */
   const TOP=[
-    [null,90,null,93,null,90,null,93],
-    [null,88,null,85,null,88,null,90],
-    [null,90,null,95,null,93,null,90],
-    [null,93,null,90,null,86,null,86]
+    [null,null,null,null,null,88],
+    [null,null,null,null,null,86],
+    [null,null,null,null,null,90],
+    [null,null,null,null,null,null],
+    [null,null,null,null,null,93],
+    [null,null,null,null,null,88],
+    [null,null,null,null,null,85],
+    [null,null,null,null,null,null]
   ];
   const hz=n=>440*Math.pow(2,(n-69)/12);
 
@@ -1548,27 +1567,28 @@ const Music=(function(){
      wall-clock time, so a busy main thread can no longer nudge the beat. */
   function scheduleBar(t0){
     const c=CH[bar%CH.length], m=MEL[bar%MEL.length], tp=TOP[bar%TOP.length];
-    const eighth=BAR/8;
+    const sub=BAR/6;
 
-    /* rolling harp figure */
-    const order=[0,1,2,3,2,1,2,3];
-    for(let i=0;i<8;i++) harp(t0+i*eighth, hz(c.arp[order[i]]-12), .045, .9);
+    /* oom — the bass note, alone on beat one */
+    harp(t0, hz(c.root-12), .08, 1.5);
 
-    /* bass on 1 and 3, plucked chord on 2 and 4 — that's the lift */
-    harp(t0, hz(c.root-12), .075, 1.4);
-    harp(t0+2*eighth, hz(c.root-12), .05, 1.0);
-    [1,3].forEach(b=>{
+    /* pah-pah — light chord plucks on beats two and three, the notes
+       spread by a few milliseconds so they sound strummed, not stabbed */
+    [1,2].forEach(b=>{
       const t=t0+b*BEAT;
-      c.arp.slice(0,3).forEach((n,i)=>pizz(t+i*.006, hz(n-12), .05));
+      c.arp.forEach((n,i)=>pizz(t+i*.008, hz(n-12), .042));
     });
 
-    /* melody, then the chirpy counter-line above it */
-    for(let i=0;i<8;i++) if(m[i]!==null)  celesta(t0+i*eighth, hz(m[i]),  .085, 1.3);
-    for(let i=0;i<8;i++) if(tp[i]!==null) celesta(t0+i*eighth, hz(tp[i]), .032, .8);
+    /* melody on the music box, with the glockenspiel echo above */
+    for(let i=0;i<6;i++) if(m[i]!==null)  celesta(t0+i*sub, hz(m[i]),  .09,  1.5);
+    for(let i=0;i<6;i++) if(tp[i]!==null) celesta(t0+i*sub, hz(tp[i]), .034, 1.1);
 
-    padOsc.forEach((o,i)=>o.frequency.setTargetAtTime(hz(c.arp[i%c.arp.length]-24), t0, .4));
+    /* a single grace note on the way into each new phrase */
+    if(bar%8===7) celesta(t0+5*sub, hz(m[0]+12), .03, .9);
 
-    if(Math.random()<.7) sparkle(t0+Math.random()*BAR);
+    padOsc.forEach((o,i)=>o.frequency.setTargetAtTime(hz(c.arp[i%c.arp.length]-24), t0, .45));
+
+    if(bar%2===0) sparkle(t0+Math.random()*BAR);
 
     bar++;
   }
@@ -1701,6 +1721,8 @@ function revealAll(){
   applyMotion();
   if(REDUCED){
     btn.classList.add('show');
+    btn.textContent='Turn off animation';
+    btn.setAttribute('aria-pressed','true');
     btn.addEventListener('click',()=>{
       motionOn=!motionOn;
       applyMotion();
