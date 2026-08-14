@@ -566,7 +566,18 @@ const CONFIG = {
   rsvpWhatsApp  : "",
   rsvpEmail     : "rsvp@example.com",
 
-  music: true    // starts by itself the moment the envelope opens
+  music: true,   // starts by itself the moment the envelope opens
+
+  /* An audio file here replaces the built-in synth entirely.
+     musicLoopSeconds is the loop's true length — MP3 encoding pads the
+     end by a few dozen milliseconds, and without an explicit loop point
+     you hear that padding as a gap on every repeat. This loop is
+     4 bars at 120 BPM, so exactly 8 seconds.
+     Swap to fairy-harp.wav if you ever hear a seam; it has no padding
+     at all, just a bigger file. */
+  musicFile        : "music/fairy-harp.mp3",
+  musicLoopSeconds : 8,
+  musicVolume      : 0.55
 };
 </script>
 
@@ -1474,13 +1485,13 @@ function showHandoff(body, copied){
 const Music=(function(){
   let ctx,master,pad,padOsc=[],lookahead=null,bar=0,nextBarAt=0,on=false;
 
-  const BPM=100, BEAT=60/BPM, BAR=BEAT*4;
+  const BPM=86, BEAT=60/BPM, BAR=BEAT*4;   // matched to the reference clip
   /* Queue two whole bars ahead. The page runs 60-odd SMIL animations and
      a scroll handler, so a wake-up can easily be delayed by half a second;
      with only 0.35s queued, bars were being scheduled with a timestamp
      already in the past, and Web Audio fires those instantly, bunched.
      That -- not the notes -- was the off-beat. */
-  const SCHED_AHEAD=(60/100)*4*2;   // two bars
+  const SCHED_AHEAD=(60/86)*4*2;    // two bars
   const TICK=120;                   // ms between scheduler wake-ups
 
   /* Magical rather than metrical.
@@ -1494,37 +1505,39 @@ const Music=(function(){
 
      Major sevenths throughout — that suspended, unresolved colour is
      what makes a chord sound enchanted rather than merely cheerful. */
+  /* G major, matching the reference clip's key and its 86 BPM.
+     I–vi–IV–V, with sevenths on the G and C for the shimmer. */
   const CH=[
-    {root:38, arp:[62,66,69,73]},   // Dmaj7
-    {root:35, arp:[62,66,69,74]},   // Bm7
-    {root:31, arp:[62,67,71,74]},   // Gmaj7
-    {root:33, arp:[61,64,69,73]},   // A
-    {root:38, arp:[62,66,69,73]},   // Dmaj7
-    {root:30, arp:[64,69,73,76]},   // F#m7
-    {root:31, arp:[62,67,71,74]},   // Gmaj7
-    {root:33, arp:[61,64,69,71]}    // A7 — pulls back round to the top
+    {root:43, arp:[67,71,74,78]},   // Gmaj7
+    {root:40, arp:[67,71,74,76]},   // Em7
+    {root:36, arp:[64,67,72,76]},   // Cmaj7
+    {root:38, arp:[66,69,74,78]},   // D
+    {root:43, arp:[67,71,74,78]},   // Gmaj7
+    {root:40, arp:[67,71,74,76]},   // Em7
+    {root:36, arp:[64,67,72,76]},   // Cmaj7
+    {root:38, arp:[66,69,73,76]}    // D7 — turns the phrase back round
   ];
   /* Eight subdivisions per bar, but notes only ever on the four beats.
      The odd slots stay empty by design, not by accident. */
   const MEL=[
-    [81,null,83,null,86,null,83,null],
-    [81,null,78,null,81,null,83,null],
     [86,null,83,null,79,null,83,null],
-    [85,null,81,null,78,null,76,null],
-    [81,null,83,null,86,null,88,null],
-    [88,null,85,null,81,null,85,null],
-    [86,null,83,null,79,null,83,null],
-    [81,null,78,null,74,null,null,null]
+    [84,null,79,null,76,null,79,null],
+    [88,null,84,null,81,null,84,null],
+    [86,null,83,null,78,null,81,null],
+    [83,null,86,null,90,null,86,null],
+    [88,null,84,null,79,null,84,null],
+    [86,null,81,null,84,null,88,null],
+    [86,null,83,null,78,null,null,null]
   ];
   /* a distant bell answering at the end of each phrase */
   const TOP=[
+    [null,null,null,null,null,null,null,91],
+    [null,null,null,null,null,null,null,null],
     [null,null,null,null,null,null,null,93],
     [null,null,null,null,null,null,null,null],
     [null,null,null,null,null,null,null,95],
     [null,null,null,null,null,null,null,null],
-    [null,null,null,null,null,null,null,93],
-    [null,null,null,null,null,null,null,null],
-    [null,null,null,null,null,null,null,90],
+    [null,null,null,null,null,null,null,91],
     [null,null,null,null,null,null,null,null]
   ];
   const hz=n=>440*Math.pow(2,(n-69)/12);
@@ -1700,10 +1713,97 @@ const Music=(function(){
   };
 })();
 
+/* If CONFIG.musicFile is set, that file plays instead of the built-in
+   score. Same interface, so the mute button and the envelope-open
+   trigger work either way. */
+const Track=(function(){
+  let ctx=null, gain=null, buf=null, node=null, on=false, loading=false, el=null;
+
+  const target=()=>Math.min(1,Math.max(0,CONFIG.musicVolume==null?.55:CONFIG.musicVolume));
+
+  function ramp(to,secs){
+    if(!gain) return;
+    const t=ctx.currentTime;
+    gain.gain.cancelScheduledValues(t);
+    gain.gain.setValueAtTime(gain.gain.value,t);
+    gain.gain.linearRampToValueAtTime(to,t+secs);
+  }
+
+  function play(){
+    if(node||!buf) return;
+    node=ctx.createBufferSource();
+    node.buffer=buf;
+    node.loop=true;
+    /* the important bit: loop the musical length, not the decoded
+       length, so MP3 encoder padding never gets played */
+    const L=CONFIG.musicLoopSeconds;
+    if(L && buf.duration>L){ node.loopStart=0; node.loopEnd=L; }
+    node.connect(gain);
+    node.start();
+    ramp(target(),2.2);
+  }
+
+  /* if fetch is unavailable — opening the file straight off disk with
+     file:// blocks it — fall back to a plain <audio> element */
+  function fallback(){
+    if(el) return;
+    el=new Audio(CONFIG.musicFile);
+    el.loop=true; el.volume=target();
+    el.play().catch(()=>{});
+  }
+
+  return{
+    get available(){ return !!CONFIG.musicFile },
+    start(){
+      on=true;
+      if(!ctx){
+        try{
+          ctx=new (window.AudioContext||window.webkitAudioContext)();
+          gain=ctx.createGain(); gain.gain.value=0; gain.connect(ctx.destination);
+        }catch(e){ fallback(); return true; }
+      }
+      if(ctx.state==='suspended') ctx.resume();
+      if(buf){ play(); return true; }
+      if(!loading){
+        loading=true;
+        fetch(CONFIG.musicFile)
+          .then(r=>{ if(!r.ok) throw new Error(r.status); return r.arrayBuffer(); })
+          .then(a=>new Promise((res,rej)=>{
+            const p=ctx.decodeAudioData(a,res,rej);
+            if(p&&p.then) p.then(res,rej);        // older Safari has no promise form
+          }))
+          .then(b=>{ buf=b; loading=false; if(on) play(); })
+          .catch(()=>{ loading=false; if(on) fallback(); });
+      }
+      return true;
+    },
+    stop(){
+      on=false;
+      if(el){ el.pause(); }
+      if(node){
+        ramp(0,.5);
+        const n=node; node=null;
+        setTimeout(()=>{ try{ n.stop(); n.disconnect(); }catch(e){} },700);
+      }
+      return false;
+    },
+    toggle(){ return on?this.stop():this.start() },
+    get playing(){ return on }
+  };
+})();
+
+/* whichever source is configured */
+const Audio$ = { 
+  start(){ return Track.available ? Track.start() : Music.start() },
+  stop(){  return Track.available ? Track.stop()  : Music.stop()  },
+  toggle(){return Track.available ? Track.toggle(): Music.toggle()},
+  get playing(){ return Track.available ? Track.playing : Music.playing }
+};
+
 /* discreet mute control */
 const muteBtn=$('mute');
 muteBtn.addEventListener('click',()=>{
-  const p=Music.toggle();
+  const p=Audio$.toggle();
   muteBtn.classList.toggle('off',!p);
   muteBtn.setAttribute('aria-pressed',String(p));
   muteBtn.setAttribute('aria-label',p?'Turn music off':'Turn music on');
@@ -1726,7 +1826,7 @@ function openInvite(){
   /* The envelope tap is the user gesture browsers require, so the music
      can start on its own from here — no play button needed. */
   if(CONFIG.music){
-    Music.start();
+    Audio$.start();
     setTimeout(()=>{muteBtn.classList.add('show')},2200);
   }
   setTimeout(()=>{cover.style.display='none'},2500);
