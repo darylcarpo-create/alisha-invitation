@@ -1,0 +1,1289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>You're Invited</title>
+<meta name="theme-color" content="#fbe6ea">
+<style>
+/* ============================================================
+   TOKENS — pulled from the cake
+   ============================================================ */
+:root{
+  --fondant:#f6c8d2;        /* the cake's pink */
+  --fondant-deep:#eda9b9;
+  --blush-bg:#fbe9ec;
+  --cream:#fffaf4;
+  --icing:#ffffff;
+  --sage:#a3b58a;
+  --sage-deep:#8b9d73;
+  --gold:#c19a4e;
+  --gold-light:#dcbc7d;
+  --ladybird:#c8452f;
+  --ink:#7c6259;
+  --ink-soft:#9b8378;
+  --line:rgba(193,154,78,.34);
+  --line-pink:rgba(237,169,185,.5);
+
+  --script:'Snell Roundhand','Brush Script MT','Segoe Script','Lucida Handwriting','Apple Chancery',cursive;
+  --serif:'Iowan Old Style','Palatino Linotype','Palatino','Book Antiqua',Georgia,serif;
+  --sans:'Optima','Avenir Next','Segoe UI',system-ui,sans-serif;
+
+  --col:min(560px,100%);
+  --pad:26px;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+html{-webkit-text-size-adjust:100%}
+body{
+  font-family:var(--serif);color:var(--ink);
+  background:var(--blush-bg);overflow-x:hidden;-webkit-font-smoothing:antialiased;
+}
+img{max-width:100%;display:block}
+button{font:inherit;color:inherit;cursor:pointer;border:0;background:none}
+a{color:inherit}
+:focus-visible{outline:2px solid var(--gold);outline-offset:3px;border-radius:4px}
+
+/* warm bokeh backdrop, straight off the cake photo */
+.paper{
+  position:fixed;inset:0;pointer-events:none;z-index:0;
+  background:
+    radial-gradient(60% 40% at 50% 0%,#fff4f2 0%,rgba(255,255,255,0) 65%),
+    radial-gradient(70% 45% at 105% 30%,#fdeee0 0%,rgba(255,255,255,0) 70%),
+    radial-gradient(70% 45% at -5% 60%,#fbe7ea 0%,rgba(255,255,255,0) 70%),
+    linear-gradient(180deg,#fdeef0 0%,#fbe9ec 45%,#f8e6df 100%);
+}
+.bokeh{position:fixed;inset:0;pointer-events:none;z-index:1}
+.grain{position:fixed;inset:0;pointer-events:none;z-index:1;opacity:.3;mix-blend-mode:multiply}
+
+.shell{position:relative;z-index:3;width:var(--col);margin:0 auto}
+
+/* ============================================================
+   COVER
+   ============================================================ */
+#cover{
+  position:fixed;inset:0;z-index:60;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  padding:0 22px;overflow:hidden;
+  background:linear-gradient(180deg,#fdf1f0 0%,#fbe9ec 50%,#f8e7e0 100%);
+  transition:opacity .9s ease,visibility .9s;
+}
+#cover.gone{opacity:0;visibility:hidden}
+.cover-title{
+  font-family:var(--script);font-size:clamp(54px,16.5vw,84px);line-height:.86;
+  color:var(--gold);text-align:center;margin:0;letter-spacing:.01em;
+  text-shadow:0 1px 0 rgba(255,255,255,.9),0 3px 16px rgba(193,154,78,.25);
+}
+.cover-title em{display:block;font-style:normal;padding-left:.35em}
+.crown{width:min(180px,46vw);margin:0 auto 4px;display:block}
+
+.env-wrap{
+  position:relative;width:min(300px,74vw);aspect-ratio:1/.74;margin:20px 0 16px;
+  perspective:900px;border-radius:8px;
+  transition:transform .5s cubic-bezier(.2,.9,.3,1.3);
+}
+.env-wrap:hover{transform:translateY(-5px) scale(1.015)}
+.env-wrap:active{transform:translateY(-1px) scale(.99)}
+.env-wrap svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+.flap{transform-origin:50% 22.5%;transition:transform 1s cubic-bezier(.6,-.15,.3,1)}
+.opening .flap{transform:rotateX(178deg)}
+.letter{transform:translateY(0);opacity:0;transition:transform 1.05s cubic-bezier(.3,.9,.25,1) .45s,opacity .3s .45s}
+.opening .letter{transform:translateY(-46%) scale(1.06);opacity:1}
+.env-hint{font-size:15px;color:var(--ink-soft);text-align:center;margin:0}
+.env-hint b{font-family:var(--sans);font-weight:600;font-style:italic;color:var(--gold)}
+.pulse{animation:pulse 2.6s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:.55}50%{opacity:1}}
+
+/* ============================================================
+   SECTIONS
+   ============================================================ */
+.sec{position:relative;padding:60px var(--pad);text-align:center}
+.sec--tight{padding-top:30px}
+.reveal{opacity:0;transform:translateY(26px);transition:opacity .9s ease,transform .9s cubic-bezier(.2,.7,.3,1)}
+.reveal.in{opacity:1;transform:none}
+
+.script-h{font-family:var(--script);font-size:clamp(40px,11vw,54px);color:var(--gold);line-height:1;margin:0 0 6px}
+.rule{display:block;margin:12px auto 22px;width:130px;height:16px}
+.body{font-size:16.5px;line-height:1.78;margin:0 auto;max-width:34em}
+.small{font-family:var(--sans);font-size:12px;letter-spacing:.2em;text-transform:uppercase;color:var(--gold)}
+
+/* ---------- hero: the cake tier ---------- */
+#hero{padding-top:74px;padding-bottom:6px}
+.tier{
+  position:relative;padding:34px 22px 30px;
+  border-radius:26px;
+  background:
+    radial-gradient(120% 80% at 50% 0%,#fdeef2 0%,rgba(255,255,255,0) 60%),
+    linear-gradient(180deg,#f9d7de 0%,#f6c8d2 55%,#f3bcc9 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.85),
+    inset 0 -30px 50px -30px rgba(190,120,140,.4),
+    0 26px 60px -30px rgba(180,110,130,.65);
+  overflow:hidden;
+}
+.tier .tier-flora{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+
+/* the scalloped icing plaque — signature element */
+.plaque{position:relative;margin:14px auto 0;width:min(400px,94%)}
+.plaque svg{display:block;width:100%;height:auto;filter:drop-shadow(0 8px 18px rgba(180,110,130,.35))}
+.plaque-in{
+  position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  padding:0 12%;
+}
+.join{
+  font-family:var(--serif);font-style:italic;font-size:16.5px;
+  color:var(--ink);line-height:1.3;margin:0 0 8px;opacity:.85;
+}
+.occasion{
+  display:flex;align-items:center;justify-content:center;gap:9px;
+  font-family:var(--sans);font-weight:600;
+  font-size:clamp(11px,3.1vw,13px);letter-spacing:.2em;text-transform:uppercase;
+  color:var(--gold);margin:0;line-height:1.5;
+  text-shadow:0 1px 0 rgba(255,255,255,.9);
+}
+.occasion::before,.occasion::after{
+  content:"";height:1px;flex:0 0 22px;
+  background:linear-gradient(90deg,transparent,var(--gold));opacity:.6;
+}
+.occasion::after{background:linear-gradient(90deg,var(--gold),transparent)}
+.of{
+  font-family:var(--serif);font-style:italic;font-size:15px;
+  color:var(--ink-soft);margin:6px 0 0;
+}
+.celebrant{
+  font-family:var(--script);font-size:clamp(42px,13vw,62px);line-height:1;margin:2px 0 0;
+  color:var(--gold);
+  background:linear-gradient(180deg,#e0c084 0%,#c19a4e 45%,#a97f36 100%);
+  -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
+  filter:drop-shadow(0 1px 0 rgba(255,255,255,.75));
+}
+.heart{width:20px;margin:6px auto 0}
+
+.portrait{
+  position:relative;width:min(280px,76%);aspect-ratio:1/1;margin:26px auto 4px;
+  border-radius:50%;overflow:hidden;
+  box-shadow:0 0 0 7px var(--icing),0 0 0 8px var(--line),0 16px 40px -16px rgba(180,110,130,.65);
+}
+.portrait img{width:100%;height:100%;object-fit:cover}
+
+/* discreet mute toggle — music starts on its own, this only silences it */
+.mute{
+  position:fixed;right:14px;bottom:16px;z-index:40;width:40px;height:40px;border-radius:50%;
+  display:grid;place-items:center;opacity:0;visibility:hidden;transition:.5s;
+  background:rgba(255,255,255,.8);
+  box-shadow:0 8px 22px -12px rgba(160,110,60,.9),inset 0 0 0 1px var(--line);
+}
+.mute.show{opacity:.65;visibility:visible}
+.mute.show:hover{opacity:1}
+.mute .bars{display:flex;gap:2.5px;align-items:flex-end;height:16px}
+.mute .bars i{width:2.6px;background:var(--gold);border-radius:2px;animation:eq .9s ease-in-out infinite}
+.mute .bars i:nth-child(1){height:55%}
+.mute .bars i:nth-child(2){height:100%;animation-delay:.15s}
+.mute .bars i:nth-child(3){height:70%;animation-delay:.3s}
+.mute.off .bars i{animation-play-state:paused;height:32%;opacity:.45}
+@keyframes eq{0%,100%{transform:scaleY(.4)}50%{transform:scaleY(1)}}
+
+/* ---------- countdown ---------- */
+.count-frame{
+  position:relative;max-width:400px;margin:18px auto 0;padding:24px 16px 18px;
+  background:linear-gradient(180deg,#fffdf9,#fdf4ec);
+  border-radius:14px;
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.9),0 12px 34px -22px rgba(160,110,60,.8);
+}
+.count-frame::before,.count-frame::after{
+  content:"";position:absolute;left:16px;right:16px;height:6px;
+  background:radial-gradient(circle,var(--gold) 44%,transparent 46%) 0 0/9px 6px repeat-x;
+  opacity:.5;
+}
+.count-frame::before{top:9px}.count-frame::after{bottom:9px}
+.count{display:flex;justify-content:center;gap:4px;align-items:baseline}
+.count .u{flex:1;max-width:86px}
+.count .n{font-family:var(--serif);font-size:clamp(30px,9vw,42px);color:var(--fondant-deep);line-height:1;font-variant-numeric:tabular-nums}
+.count .l{font-family:var(--sans);font-size:9.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--ink-soft);margin-top:8px}
+.count .sep{font-size:clamp(24px,8vw,34px);color:var(--line-pink);transform:translateY(-4px)}
+
+/* ---------- details ---------- */
+.venue{
+  max-width:420px;margin:0 auto 28px;
+  background:rgba(255,255,255,.72);border-radius:18px;padding:22px 20px 20px;
+  box-shadow:0 14px 40px -30px rgba(160,110,60,.9),inset 0 0 0 1px rgba(255,255,255,.85);
+}
+.ribbon{
+  display:inline-block;position:relative;padding:5px 26px;margin-bottom:8px;
+  font-family:var(--script);font-size:25px;color:#fff;
+  background:linear-gradient(180deg,var(--fondant) 0%,var(--fondant-deep) 100%);
+  text-shadow:0 1px 2px rgba(160,90,110,.35);border-radius:3px;
+}
+.ribbon::before,.ribbon::after{content:"";position:absolute;top:0;bottom:0;width:12px;background:var(--fondant-deep)}
+.ribbon::before{left:-12px;clip-path:polygon(0 0,100% 0,100% 100%,0 100%,45% 50%)}
+.ribbon::after{right:-12px;clip-path:polygon(0 0,100% 0,55% 50%,100% 100%,0 100%)}
+.vdate{font-family:var(--sans);font-size:10.5px;letter-spacing:.22em;text-transform:uppercase;color:var(--ink-soft);margin:6px 0 0}
+.vtime{font-size:26px;color:var(--gold);margin:2px 0 14px;letter-spacing:.02em}
+.bnote{font-family:var(--serif);font-style:italic;font-size:15px;color:var(--fondant-deep);margin:0 0 6px}
+.vphoto{border-radius:10px;overflow:hidden;aspect-ratio:4/3;margin-bottom:14px;box-shadow:0 0 0 5px #fff,0 0 0 6px var(--line-pink)}
+.vphoto img{width:100%;height:100%;object-fit:cover}
+.vname{font-family:var(--sans);font-size:12.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--gold);line-height:1.7;margin:0}
+.vaddr{font-size:14.5px;font-style:italic;color:var(--ink-soft);margin:4px 0 14px;line-height:1.6}
+.map-btn{
+  display:inline-flex;align-items:center;gap:8px;
+  font-family:var(--sans);font-size:11.5px;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--sage-deep);text-decoration:none;padding:9px 20px;border-radius:999px;
+  background:#fff;box-shadow:inset 0 0 0 1px rgba(163,181,138,.55);
+  transition:background .25s,transform .25s;
+}
+.map-btn:hover{background:#f3f7ec;transform:translateY(-1px)}
+.map-btn svg{width:14px;height:14px}
+.bigdate{font-size:clamp(26px,7.6vw,34px);color:var(--gold);margin:0 0 4px}
+.bigday{font-family:var(--sans);font-size:11.5px;letter-spacing:.28em;text-transform:uppercase;color:var(--ink-soft);margin:0 0 28px}
+
+/* ---------- dress code ---------- */
+.swatches{display:flex;justify-content:center;gap:min(26px,7vw);margin:26px 0 40px}
+.sw{width:min(92px,24vw);aspect-ratio:1;border-radius:50%;position:relative}
+.sw span{position:absolute;left:50%;top:calc(100% + 10px);transform:translateX(-50%);
+  font-family:var(--sans);font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-soft);white-space:nowrap}
+.verse{font-family:var(--script);font-size:clamp(30px,8.5vw,40px);color:var(--fondant-deep);line-height:1.15;margin:38px 0 8px}
+.verse-ref{font-family:var(--sans);font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--gold)}
+
+/* ---------- gallery ---------- */
+.gal{display:grid;grid-template-columns:1fr 1fr;gap:10px;max-width:460px;margin:0 auto}
+.gal figure{margin:0;border-radius:10px;overflow:hidden;aspect-ratio:3/4;background:#fdeef1;
+  box-shadow:0 0 0 4px #fff,0 10px 26px -18px rgba(160,110,60,.9)}
+.gal figure:first-child{grid-column:1/-1;aspect-ratio:4/3}
+.gal img{width:100%;height:100%;object-fit:cover;transition:transform .8s cubic-bezier(.2,.8,.2,1)}
+.gal figure:hover img{transform:scale(1.05)}
+
+/* ---------- rsvp ---------- */
+.form{max-width:400px;margin:0 auto;text-align:left}
+.field{margin-bottom:16px}
+.field label{display:block;font-family:var(--sans);font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--gold);margin-bottom:7px}
+.field input,.field textarea,.field select{
+  width:100%;font-family:var(--serif);font-size:16px;color:var(--ink);
+  background:rgba(255,255,255,.85);border:0;border-radius:10px;padding:13px 15px;
+  box-shadow:inset 0 0 0 1px var(--line-pink);
+}
+.field textarea{resize:vertical;min-height:84px;line-height:1.6}
+.field select{appearance:none;
+  background-image:linear-gradient(45deg,transparent 50%,var(--gold) 50%),linear-gradient(135deg,var(--gold) 50%,transparent 50%);
+  background-position:calc(100% - 20px) 22px,calc(100% - 15px) 22px;background-size:5px 5px;background-repeat:no-repeat}
+.choice{display:flex;gap:10px}
+.choice button{flex:1;padding:13px 8px;border-radius:10px;background:rgba(255,255,255,.85);
+  box-shadow:inset 0 0 0 1px var(--line-pink);
+  font-family:var(--sans);font-size:11.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-soft);transition:.25s}
+.choice button[aria-pressed="true"]{background:var(--sage);color:#fff;box-shadow:0 8px 20px -12px var(--sage-deep)}
+.submit{
+  width:100%;margin-top:6px;padding:16px;border-radius:999px;
+  background:linear-gradient(180deg,#f2b9c6,#e79fb2);color:#fff;
+  font-family:var(--sans);font-size:12.5px;letter-spacing:.2em;text-transform:uppercase;
+  box-shadow:0 14px 30px -16px rgba(200,120,145,.95);transition:transform .25s,box-shadow .25s;
+}
+.submit:hover{transform:translateY(-2px)}
+.submit:disabled{opacity:.45;transform:none;cursor:not-allowed}
+.form-note{font-family:var(--sans);font-size:11.5px;color:var(--ink-soft);text-align:center;margin:14px 0 0;line-height:1.7}
+
+.foot{padding:48px var(--pad) 76px;text-align:center}
+
+/* ---------- picket fence + garden strips ---------- */
+.garden{position:relative;width:100%;height:132px;pointer-events:none;overflow:hidden;z-index:2}
+.garden svg{position:absolute;bottom:-1px;left:50%;transform:translateX(-50%);width:min(780px,150%);height:auto}
+.garden--top svg{bottom:auto;top:-1px;transform:translateX(-50%) scaleY(-1)}
+
+/* ambient */
+.petals{position:fixed;inset:0;pointer-events:none;z-index:4;overflow:hidden}
+.petal{position:absolute;top:-6vh;opacity:0;animation:fall linear infinite}
+@keyframes fall{
+  0%{opacity:0;transform:translateY(-10vh) rotate(0)}
+  8%{opacity:.85}90%{opacity:.7}
+  100%{opacity:0;transform:translateY(110vh) rotate(420deg)}
+}
+.flutter{animation:flutter 9s ease-in-out infinite}
+@keyframes flutter{
+  0%,100%{transform:translate(0,0) rotate(-4deg)}
+  25%{transform:translate(10px,-13px) rotate(6deg)}
+  50%{transform:translate(-6px,-6px) rotate(-8deg)}
+  75%{transform:translate(8px,-17px) rotate(4deg)}
+}
+.crawl{animation:crawl 14s ease-in-out infinite}
+@keyframes crawl{0%,100%{transform:translateX(0)}50%{transform:translateX(26px)}}
+
+.up{
+  position:fixed;left:14px;bottom:16px;z-index:40;width:44px;height:44px;border-radius:50%;
+  background:rgba(255,255,255,.88);box-shadow:0 8px 22px -12px rgba(160,110,60,.9),inset 0 0 0 1px var(--line);
+  display:grid;place-items:center;opacity:0;visibility:hidden;transition:.4s;
+}
+.up.show{opacity:1;visibility:visible}
+.up svg{width:18px;height:18px;color:var(--gold)}
+
+.ph{width:100%;height:100%;display:grid;place-items:center;text-align:center;
+  background:linear-gradient(135deg,#fdeef2 0%,#f7f1e4 50%,#eef3e6 100%)}
+.ph i{font-family:var(--sans);font-style:normal;font-size:10px;letter-spacing:.18em;
+  text-transform:uppercase;color:rgba(150,120,100,.55);padding:0 10px;line-height:1.8}
+
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.15s!important}
+  .reveal{opacity:1;transform:none}
+}
+</style>
+</head>
+<body>
+
+<!-- ======================================================================
+     EDIT EVERYTHING HERE
+     ====================================================================== -->
+<script>
+const CONFIG = {
+  celebrant   : "Alisha",
+  occasion    : "First Birthday and Baptism",
+  invitedLine : "Join us for the",
+
+  /* The countdown targets this moment. Philippine time is +08:00.
+     Change it to the baptism if you'd rather count down to that. */
+  eventISO    : "2026-09-06T10:00:00+08:00",
+
+  /* Headline date shown above the venue cards. */
+  dateLong    : "September 6, 2026",
+  dayName     : "Sunday",
+
+  /* Her actual birthday — shown as a small line under the date.
+     Set to "" to hide it. */
+  birthdayNote: "Celebrating Alisha, who turns one on September 8",
+
+  venues: [
+    {
+      label   : "Baptism",
+      date    : "September 6, 2026",
+      time    : "10:00 AM",
+      name    : "Chair of St. Peter Parish",
+      address : "Balibago, Santa Rosa, Laguna",
+      map     : "https://maps.google.com/?q=Chair+of+St+Peter+Parish+Balibago",
+      photo   : "photos/church.png"           // image URL or data: URI
+    },
+    {
+      label   : "Celebration",
+      date    : "September 6, 2026",
+      time    : "12:00 NN",
+      name    : "Shakey's Balibago",
+      address : "Balibago, Santa Rosa, Laguna",
+      map     : "https://maps.google.com/?q=Shakeys+Balibago+Santa+Rosa",
+      photo   : "photos/shakeys.png"
+    }
+  ],
+
+  dressNote  : "Come dressed for a garden party — soft, pretty and easy to play in.",
+  dressColors: [
+    { name:"Fondant Pink", hex:"#f6c8d2" },
+    { name:"Daisy White",  hex:"#fdf8f2" },
+    { name:"Garden Sage",  hex:"#a3b58a" }
+  ],
+
+  verse     : "Our little flower turns one",
+  verseRef  : "",
+
+  heroPhoto : "photos/hero.jpg",
+  gallery   : ["photos/g1.jpg","photos/g2.jpg","photos/g3.jpg","photos/g4.jpg","photos/g5.jpg"],
+
+  giftNote  : "Your presence is the sweetest gift of all. Should you wish to bring a gift, a little something for Alisha would be warmly appreciated.",
+
+  rsvpBy    : "August 30, 2026",
+
+  /* ---------------------------------------------------------------
+     RSVP DELIVERY — Messenger
+
+     Set messengerUser to your Messenger link name (the part after
+     m.me/). Find it in Messenger: your profile > Username. If you
+     don't have one, use your numeric Facebook page/profile ID.
+
+     The reply text is copied to the guest's clipboard and Messenger
+     opens on your chat, so they only have to paste and send. Some
+     Messenger builds also accept the prefilled text directly.
+
+     Other modes if you ever want them: "whatsapp", "email".
+     --------------------------------------------------------------- */
+  rsvpMode      : "messenger",
+  messengerUser : "JessieRieVidal",
+  rsvpWhatsApp  : "",
+  rsvpEmail     : "rsvp@example.com",
+
+  music: true    // starts by itself the moment the envelope opens
+};
+</script>
+
+<div class="paper"></div>
+<svg class="bokeh" id="bokeh" aria-hidden="true"></svg>
+<svg class="grain" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><filter id="gr"><feTurbulence type="fractalNoise" baseFrequency=".9" numOctaves="3"/><feColorMatrix type="saturate" values="0"/></filter><rect width="100%" height="100%" filter="url(#gr)" opacity=".2"/></svg>
+
+<!-- ================= FONDANT SPRITES ================= -->
+<svg style="position:absolute;width:0;height:0" aria-hidden="true">
+  <defs>
+    <radialGradient id="gPink"><stop offset="0" stop-color="#fff1f4"/><stop offset=".5" stop-color="#f7c9d5"/><stop offset="1" stop-color="#eba7b9"/></radialGradient>
+    <radialGradient id="gRose"><stop offset="0" stop-color="#fff"/><stop offset=".45" stop-color="#f9bdcd"/><stop offset="1" stop-color="#e493ab"/></radialGradient>
+    <radialGradient id="gWht"><stop offset="0" stop-color="#fff"/><stop offset=".7" stop-color="#fdf7f2"/><stop offset="1" stop-color="#eee2d8"/></radialGradient>
+    <radialGradient id="gYel"><stop offset="0" stop-color="#fffbee"/><stop offset=".5" stop-color="#f7e3a6"/><stop offset="1" stop-color="#e0c274"/></radialGradient>
+    <linearGradient id="gLeaf" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stop-color="#8b9d73"/><stop offset="1" stop-color="#b9c8a1"/></linearGradient>
+    <linearGradient id="gStem" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#8b9d73"/><stop offset="1" stop-color="#adbf95"/></linearGradient>
+    <linearGradient id="gPicket" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#f2e9e2"/></linearGradient>
+    <linearGradient id="gIcing" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fffefb"/><stop offset="1" stop-color="#fdf4ea"/></linearGradient>
+    <filter id="soft"><feGaussianBlur stdDeviation=".4"/></filter>
+    <filter id="puff"><feDropShadow dx="0" dy=".9" stdDeviation=".7" flood-color="#c99aa6" flood-opacity=".5"/></filter>
+  </defs>
+
+  <!-- daisy: white petals, pink or yellow centre -->
+  <symbol id="s-daisy" viewBox="-16 -16 32 32">
+    <g filter="url(#puff)">
+      <g fill="url(#gWht)">
+        <ellipse cx="0" cy="-9" rx="2.9" ry="6.8"/>
+        <ellipse cx="0" cy="-9" rx="2.9" ry="6.8" transform="rotate(40)"/>
+        <ellipse cx="0" cy="-9" rx="2.9" ry="6.8" transform="rotate(80)"/>
+        <ellipse cx="0" cy="-9" rx="2.9" ry="6.8" transform="rotate(120)"/>
+        <ellipse cx="0" cy="-9" rx="2.9" ry="6.8" transform="rotate(160)"/>
+        <ellipse cx="0" cy="-9" rx="2.9" ry="6.8" transform="rotate(200)"/>
+        <ellipse cx="0" cy="-9" rx="2.9" ry="6.8" transform="rotate(240)"/>
+        <ellipse cx="0" cy="-9" rx="2.9" ry="6.8" transform="rotate(280)"/>
+        <ellipse cx="0" cy="-9" rx="2.9" ry="6.8" transform="rotate(320)"/>
+      </g>
+      <circle r="4" fill="url(#gYel)"/>
+    </g>
+  </symbol>
+
+  <!-- gerbera: big pink petals, pink domed centre -->
+  <symbol id="s-gerbera" viewBox="-16 -16 32 32">
+    <g filter="url(#puff)">
+      <g fill="url(#gPink)">
+        <ellipse cx="0" cy="-9.5" rx="3.1" ry="6.6"/>
+        <ellipse cx="0" cy="-9.5" rx="3.1" ry="6.6" transform="rotate(36)"/>
+        <ellipse cx="0" cy="-9.5" rx="3.1" ry="6.6" transform="rotate(72)"/>
+        <ellipse cx="0" cy="-9.5" rx="3.1" ry="6.6" transform="rotate(108)"/>
+        <ellipse cx="0" cy="-9.5" rx="3.1" ry="6.6" transform="rotate(144)"/>
+        <ellipse cx="0" cy="-9.5" rx="3.1" ry="6.6" transform="rotate(180)"/>
+        <ellipse cx="0" cy="-9.5" rx="3.1" ry="6.6" transform="rotate(216)"/>
+        <ellipse cx="0" cy="-9.5" rx="3.1" ry="6.6" transform="rotate(252)"/>
+        <ellipse cx="0" cy="-9.5" rx="3.1" ry="6.6" transform="rotate(288)"/>
+        <ellipse cx="0" cy="-9.5" rx="3.1" ry="6.6" transform="rotate(324)"/>
+      </g>
+      <circle r="4.4" fill="url(#gRose)"/>
+      <circle r="2.4" fill="#f6b6c6" opacity=".8"/>
+    </g>
+  </symbol>
+
+  <!-- small 5-petal blossom -->
+  <symbol id="s-blossom" viewBox="-12 -12 24 24">
+    <g filter="url(#puff)">
+      <g>
+        <circle cx="0" cy="-6.2" r="4.1"/>
+        <circle cx="0" cy="-6.2" r="4.1" transform="rotate(72)"/>
+        <circle cx="0" cy="-6.2" r="4.1" transform="rotate(144)"/>
+        <circle cx="0" cy="-6.2" r="4.1" transform="rotate(216)"/>
+        <circle cx="0" cy="-6.2" r="4.1" transform="rotate(288)"/>
+      </g>
+      <circle r="2.6" fill="url(#gYel)"/>
+    </g>
+  </symbol>
+
+  <!-- fondant tulip -->
+  <symbol id="s-tulip" viewBox="-12 -18 24 36">
+    <g filter="url(#puff)">
+      <path d="M0 13 C-7 9 -8.4 -2 -6.2 -10 C-3 -14.5 3 -14.5 6.2 -10 C8.4 -2 7 9 0 13Z"/>
+      <path d="M-6.2 -9 C-3.6 -4 -3.4 6 0 12" fill="none" stroke="rgba(255,255,255,.6)" stroke-width="1.3"/>
+      <path d="M6.2 -9 C3.6 -4 3.4 6 0 12" fill="none" stroke="rgba(0,0,0,.05)" stroke-width="1.3"/>
+    </g>
+  </symbol>
+
+  <!-- fondant leaf -->
+  <symbol id="s-leaf" viewBox="-14 -8 28 16">
+    <g filter="url(#puff)">
+      <path d="M-12 0 C-6 -7.4 6 -7.4 12 0 C6 7.4 -6 7.4 -12 0Z" fill="url(#gLeaf)"/>
+      <path d="M-10 0 H10" stroke="rgba(255,255,255,.5)" stroke-width="1"/>
+    </g>
+  </symbol>
+
+  <!-- leaf mound (the piped green base of the cake) -->
+  <symbol id="s-mound" viewBox="-30 -12 60 24">
+    <g fill="url(#gLeaf)" filter="url(#soft)">
+      <ellipse cx="-20" cy="4" rx="9" ry="4.4" transform="rotate(-18 -20 4)"/>
+      <ellipse cx="-8" cy="2" rx="9.5" ry="4.6" transform="rotate(12 -8 2)"/>
+      <ellipse cx="4" cy="4" rx="9" ry="4.4" transform="rotate(-14 4 4)"/>
+      <ellipse cx="16" cy="2" rx="9.5" ry="4.6" transform="rotate(16 16 2)"/>
+      <ellipse cx="-14" cy="-3" rx="8" ry="4" transform="rotate(20 -14 -3)"/>
+      <ellipse cx="0" cy="-4" rx="8.4" ry="4.2" transform="rotate(-16 0 -4)"/>
+      <ellipse cx="12" cy="-3" rx="8" ry="4" transform="rotate(18 12 -3)"/>
+    </g>
+  </symbol>
+
+  <!-- butterfly on a wire, exactly like the cake toppers -->
+  <symbol id="s-fly" viewBox="-12 -10 24 20">
+    <g filter="url(#puff)">
+      <path d="M0 0 C-3 -9.4 -11 -9 -10.6 -3 C-10.2 2 -4 3 0 0Z" fill="url(#gPink)"/>
+      <path d="M0 0 C3 -9.4 11 -9 10.6 -3 C10.2 2 4 3 0 0Z" fill="url(#gPink)"/>
+      <path d="M0 0 C-3 6.4 -8 8 -8 4 C-8 1 -4 0 0 0Z" fill="url(#gRose)" opacity=".9"/>
+      <path d="M0 0 C3 6.4 8 8 8 4 C8 1 4 0 0 0Z" fill="url(#gRose)" opacity=".9"/>
+      <ellipse rx=".9" ry="4.4" fill="#e39cb0"/>
+      <path d="M-1 -3 C-2.4 -6 -4 -7.4 -5.6 -8M1 -3 C2.4 -6 4 -7.4 5.6 -8" stroke="#e0a4b4" stroke-width=".7" fill="none"/>
+    </g>
+  </symbol>
+
+  <!-- ladybird -->
+  <symbol id="s-lady" viewBox="-10 -8 20 16">
+    <g filter="url(#puff)">
+      <ellipse cx="0" cy="0" rx="7.4" ry="6" fill="#c8452f"/>
+      <path d="M0 -6 V6" stroke="#7d2418" stroke-width="1"/>
+      <ellipse cx="-6.2" cy="-.6" rx="3" ry="3.4" fill="#3d2320"/>
+      <circle cx="-1.8" cy="-2.6" r="1.4" fill="#3d2320"/>
+      <circle cx="2.4" cy="-1.4" r="1.5" fill="#3d2320"/>
+      <circle cx="-2.4" cy="2.4" r="1.3" fill="#3d2320"/>
+      <circle cx="3" cy="2.6" r="1.2" fill="#3d2320"/>
+      <ellipse cx="-2.6" cy="-3.6" rx="2.2" ry="1.1" fill="#fff" opacity=".3"/>
+    </g>
+  </symbol>
+
+  <!-- pearl dot -->
+  <symbol id="s-pearl" viewBox="-5 -5 10 10">
+    <circle r="4" fill="#fffdf8"/><circle cx="-1.2" cy="-1.4" r="1.5" fill="#fff"/>
+  </symbol>
+</svg>
+
+<!-- ================= COVER ================= -->
+<div id="cover" role="dialog" aria-label="Open your invitation">
+  <svg class="crown" viewBox="0 0 200 60" aria-hidden="true" id="crown"></svg>
+  <h1 class="cover-title">You're<em>Invited</em></h1>
+
+  <button class="env-wrap" id="envelope" aria-label="Open the invitation">
+    <svg viewBox="0 0 300 222" aria-hidden="true">
+      <g class="letter">
+        <rect x="34" y="34" width="232" height="150" rx="6" fill="#fffdf9" stroke="rgba(193,154,78,.35)"/>
+        <g stroke="rgba(193,154,78,.3)" stroke-width="2.4" stroke-linecap="round">
+          <path d="M78 74h144M96 96h108M86 118h128M110 140h80"/>
+        </g>
+      </g>
+      <path d="M8 46 h284 a6 6 0 0 1 6 6 v158 a6 6 0 0 1 -6 6 h-284 a6 6 0 0 1 -6 -6 v-158 a6 6 0 0 1 6 -6z" fill="#fbe0e6"/>
+      <path d="M2 210 L150 118 L298 210 Z" fill="#f7cdd8"/>
+      <path d="M2 52 L150 148 L298 52" fill="none" stroke="rgba(193,154,78,.28)" stroke-width="1.4"/>
+      <g id="envFlora"></g>
+      <circle cx="150" cy="150" r="23" fill="#fffdf8" stroke="rgba(193,154,78,.45)" stroke-width="1.5"/>
+      <use href="#s-daisy" x="136" y="136" width="28" height="28"/>
+      <g class="flap">
+        <path d="M2 52 L150 148 L298 52 L292 46 H8 Z" fill="#f8d5de"/>
+        <path d="M8 46 H292 L150 138 Z" fill="#fbe2e8"/>
+      </g>
+    </svg>
+  </button>
+
+  <p class="env-hint pulse">click the <b>envelope</b> to open</p>
+</div>
+
+<!-- ================= INVITATION ================= -->
+<main id="invite" aria-hidden="true">
+
+  <div class="shell">
+    <section class="sec" id="hero">
+      <div class="tier reveal">
+        <svg class="tier-flora" id="tierFlora" preserveAspectRatio="none" aria-hidden="true"></svg>
+
+        <div class="plaque">
+          <svg viewBox="0 0 400 250" aria-hidden="true" id="plaqueSvg"></svg>
+          <div class="plaque-in">
+            <p class="join" id="joinLine"></p>
+            <p class="occasion" id="occasionLine"></p>
+            <p class="of">of</p>
+            <h2 class="celebrant" id="celebrantName"></h2>
+            <svg class="heart" viewBox="0 0 24 22" aria-hidden="true">
+              <path d="M12 21C5 15.6 1.5 12.2 1.5 7.9 1.5 4.6 4 2.2 7.1 2.2c2 0 3.8 1 4.9 2.6 1.1-1.6 2.9-2.6 4.9-2.6 3.1 0 5.6 2.4 5.6 5.7C22.5 12.2 19 15.6 12 21z" fill="#f2a8bb"/>
+            </svg>
+          </div>
+        </div>
+
+        <div class="portrait" id="heroPortrait"></div>
+      </div>
+    </section>
+  </div>
+
+  <div class="garden" data-garden="fence"></div>
+
+  <div class="shell">
+    <section class="sec sec--tight reveal">
+      <p class="small" id="countLabel">Counting down to the day</p>
+      <div class="count-frame">
+        <div class="count" id="countdown" role="timer">
+          <div class="u"><div class="n" id="cd-d">00</div><div class="l">Days</div></div>
+          <div class="sep">:</div>
+          <div class="u"><div class="n" id="cd-h">00</div><div class="l">Hours</div></div>
+          <div class="sep">:</div>
+          <div class="u"><div class="n" id="cd-m">00</div><div class="l">Minutes</div></div>
+          <div class="sep">:</div>
+          <div class="u"><div class="n" id="cd-s">00</div><div class="l">Seconds</div></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="sec reveal" id="details">
+      <h3 class="script-h">Event Details</h3>
+      <svg class="rule" viewBox="0 0 130 16" aria-hidden="true">
+        <path d="M4 8h44M82 8h44" stroke="var(--line)" stroke-width="1"/>
+        <use href="#s-blossom" x="56" y="0" width="18" height="18" fill="url(#gPink)"/>
+      </svg>
+      <p class="bigdate" id="bigDate"></p>
+      <p class="bigday" id="bigDay"></p>
+      <p class="bnote" id="birthdayNote"></p>
+      <div id="venues"></div>
+    </section>
+  </div>
+
+  <div class="garden garden--top" data-garden="border"></div>
+
+  <div class="shell">
+    <section class="sec reveal" id="dress">
+      <h3 class="script-h">Dress Code</h3>
+      <p class="body" id="dressNote"></p>
+      <div class="swatches" id="swatches"></div>
+      <p class="verse" id="verse"></p>
+      <p class="verse-ref" id="verseRef"></p>
+    </section>
+
+    <section class="sec reveal" id="gift">
+      <h3 class="script-h">Gift Guide</h3>
+      <svg class="rule" viewBox="0 0 130 16" aria-hidden="true">
+        <path d="M4 8h44M82 8h44" stroke="var(--line)" stroke-width="1"/>
+        <use href="#s-daisy" x="56" y="0" width="18" height="18"/>
+      </svg>
+      <p class="body" id="giftNote"></p>
+    </section>
+
+    <section class="sec reveal" id="galleryS">
+      <h3 class="script-h" id="galTitle"></h3>
+      <svg class="rule" viewBox="0 0 130 16" aria-hidden="true">
+        <path d="M4 8h44M82 8h44" stroke="var(--line)" stroke-width="1"/>
+        <use href="#s-lady" x="56" y="1" width="18" height="14"/>
+      </svg>
+      <div class="gal" id="gallery"></div>
+    </section>
+
+    <section class="sec reveal" id="rsvp">
+      <h3 class="script-h">RSVP</h3>
+      <p class="body" style="margin-bottom:26px" id="rsvpIntro"></p>
+      <div class="form">
+        <div class="field">
+          <label for="f-name">Your name</label>
+          <input id="f-name" type="text" autocomplete="name" placeholder="Maria Santos">
+        </div>
+        <div class="field">
+          <label>Will you celebrate with us?</label>
+          <div class="choice" id="attend">
+            <button type="button" data-v="yes" aria-pressed="false">Joyfully accepts</button>
+            <button type="button" data-v="no"  aria-pressed="false">Regretfully declines</button>
+          </div>
+        </div>
+        <div class="field" id="guestsField">
+          <label for="f-guests">Number of guests</label>
+          <select id="f-guests"><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6+</option></select>
+        </div>
+        <div class="field">
+          <label for="f-msg">A message for the family <span style="text-transform:none;letter-spacing:0;font-style:italic">(optional)</span></label>
+          <textarea id="f-msg" placeholder="We can't wait to celebrate with you."></textarea>
+        </div>
+        <button class="submit" id="sendRsvp" disabled>Send my RSVP</button>
+        <p class="form-note" id="rsvpNote"></p>
+      </div>
+    </section>
+  </div>
+
+  <div class="garden" data-garden="fence"></div>
+
+  <div class="shell">
+    <footer class="foot reveal">
+      <svg style="width:150px;margin:0 auto" viewBox="0 0 200 60" aria-hidden="true" id="crown2"></svg>
+      <p class="script-h" style="margin-top:8px">With love</p>
+      <p class="small" id="footNames" style="margin-top:14px"></p>
+    </footer>
+  </div>
+</main>
+
+<div class="petals" id="petals" aria-hidden="true"></div>
+
+<button class="mute" id="mute" aria-pressed="true" aria-label="Turn music off">
+  <span class="bars" aria-hidden="true"><i></i><i></i><i></i></span>
+</button>
+
+<button class="up" id="up" aria-label="Back to top">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
+</button>
+
+<script>
+/* ---------- seeded RNG so the garden is identical every load ---------- */
+function mulberry(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+
+const PINKS=['url(#gPink)','url(#gRose)'];
+const BLOOMS=[
+  {s:'s-daisy',   f:null},
+  {s:'s-gerbera', f:null},
+  {s:'s-blossom', f:'url(#gPink)'},
+  {s:'s-blossom', f:'url(#gWht)'},
+  {s:'s-tulip',   f:'url(#gPink)'},
+  {s:'s-tulip',   f:'url(#gRose)'}
+];
+const pick=(r,a)=>a[(r()*a.length)|0];
+
+/* ============================================================
+   PICKET FENCE + GARDEN STRIPS
+   ============================================================ */
+function buildGarden(el){
+  const fence = el.dataset.garden==='fence';
+  const W=780,H=fence?150:120;
+  const rnd=mulberry(fence?8123:3391);
+  let o=`<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">`;
+
+  if(fence){
+    // pickets
+    const gap=32, top=H-70;
+    o+=`<g>`;
+    for(let x=6;x<W;x+=gap){
+      o+=`<path d="M${x} ${H} v-56 l7 -12 l7 12 v56 z" fill="url(#gPicket)" stroke="rgba(190,160,150,.28)" stroke-width=".8"/>`;
+      o+=`<use href="#s-pearl" x="${x+4}" y="${H-40}" width="6" height="6"/>`;
+    }
+    // rails
+    o+=`<rect x="0" y="${top+22}" width="${W}" height="9" fill="url(#gPicket)" opacity=".95"/>`;
+    o+=`<rect x="0" y="${top+46}" width="${W}" height="9" fill="url(#gPicket)" opacity=".95"/>`;
+    o+=`</g>`;
+  }
+
+  // piped leaf mound along the base
+  for(let x=-20;x<W+20;x+=42){
+    const s=54+rnd()*22;
+    o+=`<use href="#s-mound" x="${x.toFixed(0)}" y="${(H-s*.34).toFixed(0)}" width="${s.toFixed(0)}" height="${(s*.4).toFixed(0)}"/>`;
+  }
+
+  // scattered fondant leaves
+  for(let i=0;i<(fence?18:12);i++){
+    const s=20+rnd()*16,x=rnd()*W,y=H-14-rnd()*(fence?66:44);
+    o+=`<g transform="rotate(${((rnd()-.5)*70).toFixed(0)} ${(x+s/2).toFixed(0)} ${(y+s/4).toFixed(0)})">
+      <use href="#s-leaf" x="${x.toFixed(0)}" y="${y.toFixed(0)}" width="${s.toFixed(0)}" height="${(s/2).toFixed(0)}"/></g>`;
+  }
+
+  // blooms with stems
+  const n=fence?24:16;
+  for(let i=0;i<n;i++){
+    const b=pick(rnd,BLOOMS), s=17+rnd()*17;
+    const x=(i/n)*W+(rnd()-.5)*28, y=H-s-8-rnd()*(fence?76:46);
+    o+=`<path d="M${x.toFixed(0)} ${H-6} Q${(x+4).toFixed(0)} ${(y+s).toFixed(0)} ${x.toFixed(0)} ${(y+s*.6).toFixed(0)}" stroke="url(#gStem)" stroke-width="1.6" fill="none"/>`;
+    o+=`<use href="#${b.s}" x="${(x-s/2).toFixed(0)}" y="${y.toFixed(0)}" width="${s.toFixed(0)}" height="${s.toFixed(0)}"${b.f?` fill="${b.f}"`:''}/>`;
+  }
+
+  // ladybirds on the ground
+  for(let i=0;i<(fence?3:2);i++){
+    const s=14+rnd()*6,x=40+rnd()*(W-80);
+    o+=`<g class="crawl" style="animation-delay:${(rnd()*8).toFixed(1)}s"><use href="#s-lady" x="${x.toFixed(0)}" y="${(H-s*.8-4).toFixed(0)}" width="${s.toFixed(0)}" height="${(s*.8).toFixed(0)}"/></g>`;
+  }
+
+  // butterflies on wires
+  for(let i=0;i<(fence?3:2);i++){
+    const s=18+rnd()*10,x=rnd()*W,y=rnd()*(H*.4);
+    o+=`<g class="flutter" style="animation-delay:${(rnd()*6).toFixed(1)}s">
+      <path d="M${(x+s/2).toFixed(0)} ${(y+s*.7).toFixed(0)} Q${(x+s/2+4).toFixed(0)} ${(y+s*2.4).toFixed(0)} ${(x+s/2-3).toFixed(0)} ${(y+s*3.6).toFixed(0)}" stroke="rgba(200,170,175,.5)" stroke-width=".9" fill="none"/>
+      <use href="#s-fly" x="${x.toFixed(0)}" y="${y.toFixed(0)}" width="${s.toFixed(0)}" height="${(s*.83).toFixed(0)}"/></g>`;
+  }
+  el.innerHTML=o+'</svg>';
+}
+document.querySelectorAll('.garden').forEach(buildGarden);
+
+/* ============================================================
+   THE ICING PLAQUE — scalloped, gold-dotted, wreathed
+   ============================================================ */
+(function(){
+  const svg=document.getElementById('plaqueSvg'); if(!svg) return;
+  const cx=200,cy=125,rx=172,ry=108,N=34;
+  let d='';
+  for(let i=0;i<=N;i++){
+    const a=(i/N)*Math.PI*2;
+    const bump=1+.045*Math.sin(a*11);
+    const x=cx+Math.cos(a)*rx*bump, y=cy+Math.sin(a)*ry*bump;
+    d += (i?'L':'M')+x.toFixed(1)+' '+y.toFixed(1);
+  }
+  d+='Z';
+  let o=`<path d="${d}" fill="url(#gIcing)" stroke="rgba(193,154,78,.4)" stroke-width="1.6"/>`;
+  // inner gold dotted border
+  o+='<g fill="#c19a4e" opacity=".75">';
+  for(let i=0;i<64;i++){
+    const a=(i/64)*Math.PI*2;
+    o+=`<circle cx="${(cx+Math.cos(a)*(rx-16)).toFixed(1)}" cy="${(cy+Math.sin(a)*(ry-14)).toFixed(1)}" r="1.5"/>`;
+  }
+  o+='</g>';
+  // wreath of blossoms hugging the rim
+  const rnd=mulberry(6151);
+  for(let i=0;i<26;i++){
+    const a=(i/26)*Math.PI*2, s=13+rnd()*9;
+    const x=cx+Math.cos(a)*(rx-2)-s/2, y=cy+Math.sin(a)*(ry-2)-s/2;
+    const b=pick(rnd,BLOOMS.slice(0,4));
+    o+=`<use href="#${b.s}" x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${s.toFixed(1)}" height="${s.toFixed(1)}"${b.f?` fill="${b.f}"`:''}/>`;
+    if(i%3===0){
+      const ls=15+rnd()*7;
+      o+=`<g transform="rotate(${(a*180/Math.PI+90).toFixed(0)} ${(x+8).toFixed(0)} ${(y+8).toFixed(0)})"><use href="#s-leaf" x="${(x-2).toFixed(1)}" y="${(y+6).toFixed(1)}" width="${ls.toFixed(1)}" height="${(ls/2).toFixed(1)}"/></g>`;
+    }
+  }
+  svg.setAttribute('viewBox','0 0 400 250');
+  svg.innerHTML=o;
+})();
+
+/* ---------- the cake tier's own piped flowers ---------- */
+(function(){
+  const svg=document.getElementById('tierFlora'); if(!svg) return;
+  const W=400,H=520,rnd=mulberry(4477);
+  let o='';
+  for(let i=0;i<26;i++){
+    const s=16+rnd()*16;
+    // keep the middle band clear for the plaque
+    let x=rnd()*W, y=rnd()*H;
+    const midX = x>90&&x<310, midY = y>150&&y<330;
+    if(midX&&midY){ y = y<240 ? y-130 : y+130; }
+    const b=pick(rnd,BLOOMS);
+    o+=`<use href="#${b.s}" x="${x.toFixed(0)}" y="${Math.max(4,Math.min(H-s,y)).toFixed(0)}" width="${s.toFixed(0)}" height="${s.toFixed(0)}"${b.f?` fill="${b.f}"`:''} opacity=".92"/>`;
+  }
+  for(let i=0;i<14;i++){
+    const s=20+rnd()*14,x=rnd()*W,y=rnd()*H;
+    o+=`<g transform="rotate(${((rnd()-.5)*90).toFixed(0)} ${x.toFixed(0)} ${y.toFixed(0)})"><use href="#s-leaf" x="${x.toFixed(0)}" y="${y.toFixed(0)}" width="${s.toFixed(0)}" height="${(s/2).toFixed(0)}" opacity=".8"/></g>`;
+  }
+  for(let i=0;i<3;i++){
+    const s=18+rnd()*8,x=rnd()*W,y=20+rnd()*(H-60);
+    o+=`<g class="flutter" style="animation-delay:${(rnd()*5).toFixed(1)}s"><use href="#s-fly" x="${x.toFixed(0)}" y="${y.toFixed(0)}" width="${s.toFixed(0)}" height="${(s*.83).toFixed(0)}" opacity=".9"/></g>`;
+  }
+  svg.setAttribute('viewBox',`0 0 ${W} ${H}`);
+  svg.innerHTML=o;
+})();
+
+/* ---------- flower crown (cover + footer) ---------- */
+(function(){
+  const make=(seed)=>{
+    const rnd=mulberry(seed); let o='';
+    o+=`<path d="M14 46 Q100 4 186 46" fill="none" stroke="url(#gStem)" stroke-width="2.4"/>`;
+    for(let i=0;i<9;i++){
+      const t=i/8, x=14+t*172, y=46-Math.sin(t*Math.PI)*40;
+      const s=15+rnd()*11, b=pick(rnd,BLOOMS.slice(0,4));
+      const ls=16+rnd()*6;
+      o+=`<g transform="rotate(${((t-.5)*40).toFixed(0)} ${x.toFixed(0)} ${y.toFixed(0)})"><use href="#s-leaf" x="${(x-4).toFixed(0)}" y="${(y+3).toFixed(0)}" width="${ls}" height="${ls/2}"/></g>`;
+      o+=`<use href="#${b.s}" x="${(x-s/2).toFixed(0)}" y="${(y-s/2).toFixed(0)}" width="${s.toFixed(0)}" height="${s.toFixed(0)}"${b.f?` fill="${b.f}"`:''}/>`;
+    }
+    return o;
+  };
+  const a=document.getElementById('crown'), b=document.getElementById('crown2');
+  if(a) a.innerHTML=make(3301);
+  if(b) b.innerHTML=make(9902);
+})();
+
+/* ---------- envelope florals ---------- */
+(function(){
+  const rnd=mulberry(2211); let f='';
+  for(let i=0;i<15;i++){
+    const s=16+rnd()*16,x=10+rnd()*272,y=152+rnd()*52,b=pick(rnd,BLOOMS);
+    f+=`<use href="#${b.s}" x="${x.toFixed(0)}" y="${y.toFixed(0)}" width="${s.toFixed(0)}" height="${s.toFixed(0)}"${b.f?` fill="${b.f}"`:''}/>`;
+  }
+  for(let i=0;i<8;i++){
+    const s=20+rnd()*12,x=6+rnd()*278,y=162+rnd()*44;
+    f+=`<g transform="rotate(${((rnd()-.5)*60).toFixed(0)} ${x} ${y})"><use href="#s-leaf" x="${x.toFixed(0)}" y="${y.toFixed(0)}" width="${s.toFixed(0)}" height="${(s/2).toFixed(0)}"/></g>`;
+  }
+  f+=`<use href="#s-lady" x="238" y="192" width="17" height="14"/>`;
+  const ef=document.getElementById('envFlora'); if(ef) ef.innerHTML=f;
+})();
+
+/* ---------- bokeh + falling petals ---------- */
+(function(){
+  const bk=document.getElementById('bokeh'), rnd=mulberry(1717); let o='';
+  for(let i=0;i<22;i++){
+    const r=8+rnd()*34;
+    o+=`<circle cx="${(rnd()*100).toFixed(1)}%" cy="${(rnd()*100).toFixed(1)}%" r="${r.toFixed(0)}"
+      fill="#ffe9bd" opacity="${(.1+rnd()*.22).toFixed(2)}">
+      <animate attributeName="opacity" values="${(.06+rnd()*.1).toFixed(2)};${(.24+rnd()*.16).toFixed(2)};${(.06+rnd()*.1).toFixed(2)}"
+        dur="${(4+rnd()*5).toFixed(1)}s" repeatCount="indefinite" begin="${(rnd()*5).toFixed(1)}s"/></circle>`;
+  }
+  bk.innerHTML=o;
+
+  const box=document.getElementById('petals'), r2=mulberry(555);
+  const set=[{s:'s-daisy',f:null},{s:'s-blossom',f:'url(#gPink)'},{s:'s-fly',f:null},{s:'s-leaf',f:null}];
+  let h='';
+  for(let i=0;i<15;i++){
+    const sz=11+r2()*15, p=pick(r2,set);
+    h+=`<svg class="petal" style="left:${(r2()*100).toFixed(1)}%;width:${sz.toFixed(0)}px;height:${sz.toFixed(0)}px;
+      animation-duration:${(17+r2()*20).toFixed(1)}s;animation-delay:${(r2()*24).toFixed(1)}s" viewBox="0 0 32 32">
+      <use href="#${p.s}" x="0" y="0" width="32" height="32"${p.f?` fill="${p.f}"`:''}/></svg>`;
+  }
+  box.innerHTML=h;
+})();
+
+/* ============================================================
+   CONTENT
+   ============================================================ */
+const $=id=>document.getElementById(id);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const photo=(src,alt)=> src?`<img src="${esc(src)}" alt="${esc(alt)}" loading="lazy">`
+  :`<div class="ph"><i>Add photo<br>in CONFIG</i></div>`;
+
+$('joinLine').textContent      = CONFIG.invitedLine;
+$('occasionLine').textContent  = CONFIG.occasion;
+$('celebrantName').textContent = CONFIG.celebrant;
+$('heroPortrait').innerHTML    = photo(CONFIG.heroPhoto, CONFIG.celebrant);
+$('bigDate').textContent       = CONFIG.dateLong;
+$('bigDay').textContent        = CONFIG.dayName;
+$('dressNote').textContent     = CONFIG.dressNote;
+$('verse').textContent         = CONFIG.verse;
+$('verseRef').textContent      = CONFIG.verseRef;
+$('giftNote').textContent      = CONFIG.giftNote;
+$('galTitle').textContent      = 'Our Little '+CONFIG.celebrant;
+$('footNames').textContent     = CONFIG.celebrant+' • '+CONFIG.dateLong;
+$('rsvpIntro').textContent     = 'Kindly let us know by '+CONFIG.rsvpBy+' so we can save a seat in the garden for you.';
+document.title = CONFIG.celebrant + " — You're Invited";
+
+$('swatches').innerHTML = CONFIG.dressColors.map(c=>
+  `<div class="sw" style="background:radial-gradient(circle at 32% 26%,#fff,${esc(c.hex)} 76%);
+     box-shadow:0 0 0 5px rgba(255,255,255,.9),0 10px 26px -14px rgba(150,110,90,.9)">
+     <span>${esc(c.name)}</span></div>`).join('');
+
+$('birthdayNote').textContent = CONFIG.birthdayNote || '';
+
+$('venues').innerHTML = CONFIG.venues.map(v=>`
+  <div class="venue">
+    <div class="ribbon">${esc(v.label)}</div>
+    ${v.date?`<p class="vdate">${esc(v.date)}</p>`:''}
+    <p class="vtime">${esc(v.time)}</p>
+    <div class="vphoto">${photo(v.photo,v.name)}</div>
+    <p class="vname">${esc(v.name)}</p>
+    <p class="vaddr">${esc(v.address)}</p>
+    ${v.map?`<a class="map-btn" href="${esc(v.map)}" target="_blank" rel="noopener">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 21s7-6.5 7-11a7 7 0 1 0-14 0c0 4.5 7 11 7 11z"/><circle cx="12" cy="10" r="2.6"/></svg>
+      Open in Maps</a>`:''}
+  </div>`).join('');
+
+$('gallery').innerHTML = CONFIG.gallery.map((g,i)=>
+  `<figure>${photo(g,CONFIG.celebrant+' photo '+(i+1))}</figure>`).join('');
+
+/* ---------- countdown ---------- */
+(function(){
+  const target=new Date(CONFIG.eventISO).getTime();
+  const d=$('cd-d'),h=$('cd-h'),m=$('cd-m'),s=$('cd-s');
+  const p=n=>String(Math.max(0,n)).padStart(2,'0');
+  function tick(){
+    const diff=target-Date.now();
+    if(diff<=0){d.textContent=h.textContent=m.textContent=s.textContent='00';$('countLabel').textContent='The day is here';return}
+    const S=Math.floor(diff/1000);
+    d.textContent=p(Math.floor(S/86400));
+    h.textContent=p(Math.floor(S%86400/3600));
+    m.textContent=p(Math.floor(S%3600/60));
+    s.textContent=p(S%60);
+  }
+  tick(); setInterval(tick,1000);
+})();
+
+/* ---------- rsvp ---------- */
+(function(){
+  let attending=null;
+  const btns=[...document.querySelectorAll('#attend button')];
+  const send=$('sendRsvp'), nameI=$('f-name'), gField=$('guestsField');
+  const validate=()=>{send.disabled=!(attending&&nameI.value.trim().length>1)};
+
+  btns.forEach(b=>b.addEventListener('click',()=>{
+    attending=b.dataset.v;
+    btns.forEach(x=>x.setAttribute('aria-pressed',String(x===b)));
+    gField.style.display = attending==='yes'?'':'none';
+    validate();
+  }));
+  nameI.addEventListener('input',validate);
+
+  send.addEventListener('click',async ()=>{
+    const data={
+      name     : nameI.value.trim(),
+      attending: attending==='yes'?'Yes':'No',
+      guests   : attending==='yes' ? $('f-guests').value : '0',
+      message  : $('f-msg').value.trim(),
+      event    : `${CONFIG.occasion} of ${CONFIG.celebrant}`,
+      sentAt   : new Date().toISOString()
+    };
+    const body=[
+      `RSVP — ${data.event}`,
+      `Name: ${data.name}`,
+      `Attending: ${data.attending}`,
+      data.attending==='Yes'?`Guests: ${data.guests}`:null,
+      data.message?`Message: ${data.message}`:null
+    ].filter(Boolean).join('\n');
+
+    const done=t=>{send.textContent=t;setTimeout(()=>{send.textContent='Send my RSVP'},5000)};
+    const title=`RSVP — ${data.name} (${data.attending})`;
+
+    switch(CONFIG.rsvpMode){
+      case 'messenger':{
+        /* Copy first so the guest can paste even if Messenger ignores
+           the prefill, then open the chat. */
+        let copied=false;
+        try{
+          if(navigator.clipboard && window.isSecureContext){
+            await navigator.clipboard.writeText(body); copied=true;
+          }else{
+            const ta=document.createElement('textarea');
+            ta.value=body; ta.style.position='fixed'; ta.style.opacity='0';
+            document.body.appendChild(ta); ta.select();
+            copied=document.execCommand('copy');
+            document.body.removeChild(ta);
+          }
+        }catch(e){ copied=false; }
+
+        window.open('https://m.me/'+encodeURIComponent(CONFIG.messengerUser)
+          +'?text='+encodeURIComponent(body),'_blank','noopener');
+
+        $('rsvpNote').textContent = copied
+          ? 'Your reply is copied — just paste it into the chat and send.'
+          : 'Messenger is opening. Type your reply in the chat to confirm.';
+        done('Opening Messenger…');
+        break;
+      }
+      case 'whatsapp':
+        window.open('https://wa.me/'+CONFIG.rsvpWhatsApp.replace(/\D/g,'')
+          +'?text='+encodeURIComponent(body),'_blank','noopener');
+        done('Opening WhatsApp…');
+        break;
+      default:
+        window.location.href='mailto:'+encodeURIComponent(CONFIG.rsvpEmail)
+          +'?subject='+encodeURIComponent(title)
+          +'&body='+encodeURIComponent(body);
+        done('Opening your mail app…');
+    }
+  });
+
+  $('rsvpNote').textContent = {
+    'messenger'   :'Sends your reply through Messenger.',
+    'whatsapp'    :'Opens WhatsApp with your reply ready to send.',
+    'email'       :'Opens your mail app with your reply ready to send.'
+  }[CONFIG.rsvpMode] || 'Opens your mail app with your reply ready to send.';
+})();
+
+/* ============================================================
+   MUSIC — a fairy garden: celesta melody over a harp figure,
+   a breathing string pad and drifting wind-chime sparkles.
+   Fully synthesised, so there is no audio file to host.
+   ============================================================ */
+const Music=(function(){
+  let ctx,master,pad,padOsc=[],lookahead=null,bar=0,nextBarAt=0,on=false;
+
+  const BPM=112, BEAT=60/BPM, BAR=BEAT*4;
+  const SCHED_AHEAD=0.35;   // seconds of audio queued in advance
+  const TICK=40;            // ms between scheduler wake-ups
+
+  /* Bright D major, I–V–vi–IV — the plainly happy progression, played
+     briskly with a skipping rhythm rather than a drifting one. */
+  const CH=[
+    {root:38, arp:[62,66,69,74]},   // D
+    {root:33, arp:[61,64,69,73]},   // A/C#
+    {root:35, arp:[62,66,71,74]},   // Bm
+    {root:31, arp:[62,67,71,74]}    // G
+  ];
+  /* 8 eighths per bar. Fuller and more stepwise than before — it skips
+     upward and lands on the beat, which is what reads as celebratory. */
+  const MEL=[
+    [78,81,83,86,83,81,83,null],
+    [85,83,81,78,76,78,81,null],
+    [83,86,88,86,83,81,83,null],
+    [81,83,86,83,81,78,74,null]
+  ];
+  /* a chirpy counter-line an octave up, only on the offbeats */
+  const TOP=[
+    [null,90,null,93,null,90,null,93],
+    [null,88,null,85,null,88,null,90],
+    [null,90,null,95,null,93,null,90],
+    [null,93,null,90,null,86,null,86]
+  ];
+  const hz=n=>440*Math.pow(2,(n-69)/12);
+
+  /* celesta — two partials only; the inharmonic upper one carries the
+     shimmer, and dropping the per-note LFO cuts the voice count by a third */
+  function celesta(t,f,g,dur){
+    const v=ctx.createGain();
+    v.gain.setValueAtTime(0,t);
+    v.gain.linearRampToValueAtTime(g,t+.008);
+    v.gain.exponentialRampToValueAtTime(.0001,t+dur);
+    v.connect(master);
+    const o=ctx.createOscillator(),o2=ctx.createOscillator(),a2=ctx.createGain();
+    o.type='sine'; o.frequency.value=f; o.detune.value=2;
+    o2.type='sine';o2.frequency.value=f*2.76; a2.gain.value=.13;
+    o.connect(v); o2.connect(a2); a2.connect(v);
+    o.start(t);o2.start(t);
+    o.stop(t+dur+.02);o2.stop(t+dur+.02);
+  }
+
+  function harp(t,f,g,dur){
+    const o=ctx.createOscillator(),flt=ctx.createBiquadFilter(),v=ctx.createGain();
+    o.type='triangle';o.frequency.value=f;
+    flt.type='lowpass';
+    flt.frequency.setValueAtTime(f*7,t);
+    flt.frequency.exponentialRampToValueAtTime(f*1.6,t+dur*.7);
+    v.gain.setValueAtTime(0,t);
+    v.gain.linearRampToValueAtTime(g,t+.01);
+    v.gain.exponentialRampToValueAtTime(.0001,t+dur);
+    o.connect(flt);flt.connect(v);v.connect(master);
+    o.start(t);o.stop(t+dur+.02);
+  }
+
+  /* short plucked chord — the bounce on beats 2 and 4 */
+  function pizz(t,f,g){
+    const o=ctx.createOscillator(),flt=ctx.createBiquadFilter(),v=ctx.createGain();
+    o.type='triangle';o.frequency.value=f;
+    flt.type='lowpass';
+    flt.frequency.setValueAtTime(f*9,t);
+    flt.frequency.exponentialRampToValueAtTime(f*2,t+.09);
+    v.gain.setValueAtTime(0,t);
+    v.gain.linearRampToValueAtTime(g,t+.006);
+    v.gain.exponentialRampToValueAtTime(.0001,t+.28);
+    o.connect(flt);flt.connect(v);v.connect(master);
+    o.start(t);o.stop(t+.3);
+  }
+
+  const sparkle=t=>celesta(t,hz(86+((Math.random()*12)|0)),.026,1.3);
+
+  /* Everything below is scheduled against ctx.currentTime, never against
+     wall-clock time, so a busy main thread can no longer nudge the beat. */
+  function scheduleBar(t0){
+    const c=CH[bar%CH.length], m=MEL[bar%MEL.length], tp=TOP[bar%TOP.length];
+    const eighth=BAR/8;
+
+    /* rolling harp figure */
+    const order=[0,1,2,3,2,1,2,3];
+    for(let i=0;i<8;i++) harp(t0+i*eighth, hz(c.arp[order[i]]-12), .045, .9);
+
+    /* bass on 1 and 3, plucked chord on 2 and 4 — that's the lift */
+    harp(t0, hz(c.root-12), .075, 1.4);
+    harp(t0+2*eighth, hz(c.root-12), .05, 1.0);
+    [1,3].forEach(b=>{
+      const t=t0+b*BEAT;
+      c.arp.slice(0,3).forEach((n,i)=>pizz(t+i*.006, hz(n-12), .05));
+    });
+
+    /* melody, then the chirpy counter-line above it */
+    for(let i=0;i<8;i++) if(m[i]!==null)  celesta(t0+i*eighth, hz(m[i]),  .085, 1.3);
+    for(let i=0;i<8;i++) if(tp[i]!==null) celesta(t0+i*eighth, hz(tp[i]), .032, .8);
+
+    padOsc.forEach((o,i)=>o.frequency.setTargetAtTime(hz(c.arp[i%c.arp.length]-24), t0, .4));
+
+    if(Math.random()<.7) sparkle(t0+Math.random()*BAR);
+
+    bar++;
+  }
+
+  function pump(){
+    while(nextBarAt < ctx.currentTime + SCHED_AHEAD){
+      /* if the tab was backgrounded and the clock ran far ahead,
+         re-anchor instead of frantically catching up */
+      if(nextBarAt < ctx.currentTime - BAR) nextBarAt = ctx.currentTime + .05;
+      scheduleBar(nextBarAt);
+      nextBarAt += BAR;
+    }
+  }
+
+  function build(){
+    ctx=new (window.AudioContext||window.webkitAudioContext)();
+    master=ctx.createGain();
+    master.gain.value=0;
+
+    const rev=ctx.createConvolver(),len=(ctx.sampleRate*1.8)|0,buf=ctx.createBuffer(2,len,ctx.sampleRate);
+    for(let ch=0;ch<2;ch++){
+      const d=buf.getChannelData(ch);
+      for(let i=0;i<len;i++) d[i]=(Math.random()*2-1)*Math.pow(1-i/len,3.4);
+    }
+    rev.buffer=buf;
+    const wet=ctx.createGain();wet.gain.value=.26;
+    master.connect(ctx.destination);
+    master.connect(rev);rev.connect(wet);wet.connect(ctx.destination);
+
+    pad=ctx.createGain();pad.gain.value=.014;
+    const pf=ctx.createBiquadFilter();pf.type='lowpass';pf.frequency.value=1400;
+    pad.connect(pf);pf.connect(master);
+    const breath=ctx.createOscillator(),bg=ctx.createGain();
+    breath.frequency.value=.12;bg.gain.value=.007;
+    breath.connect(bg);bg.connect(pad.gain);breath.start();
+    for(let i=0;i<3;i++){
+      const o=ctx.createOscillator();
+      o.type = i===2?'triangle':'sawtooth';
+      o.detune.value=(i-1)*7;
+      o.frequency.value=hz(38);
+      o.connect(pad);o.start();
+      padOsc.push(o);
+    }
+  }
+
+  /* iOS and Chrome suspend the context on tab switch — resume and
+     re-anchor so it picks up cleanly instead of stuttering */
+  document.addEventListener('visibilitychange',()=>{
+    if(!on||!ctx) return;
+    if(document.hidden) return;
+    if(ctx.state==='suspended') ctx.resume();
+    if(nextBarAt < ctx.currentTime) nextBarAt = ctx.currentTime + .08;
+  });
+
+  return{
+    start(){
+      if(on) return true;
+      if(!ctx) build();
+      if(ctx.state==='suspended') ctx.resume();
+      on=true;
+      nextBarAt=ctx.currentTime+.15;
+      master.gain.cancelScheduledValues(ctx.currentTime);
+      master.gain.setValueAtTime(0,ctx.currentTime);
+      master.gain.linearRampToValueAtTime(.5,ctx.currentTime+1.4);
+      pump();
+      lookahead=setInterval(pump,TICK);
+      return true;
+    },
+    stop(){
+      if(!on) return false;
+      on=false;
+      clearInterval(lookahead);lookahead=null;
+      master.gain.cancelScheduledValues(ctx.currentTime);
+      master.gain.setValueAtTime(master.gain.value,ctx.currentTime);
+      master.gain.linearRampToValueAtTime(0,ctx.currentTime+.6);
+      return false;
+    },
+    toggle(){return on?this.stop():this.start()},
+    get playing(){return on}
+  };
+})();
+
+/* discreet mute control */
+const muteBtn=$('mute');
+muteBtn.addEventListener('click',()=>{
+  const p=Music.toggle();
+  muteBtn.classList.toggle('off',!p);
+  muteBtn.setAttribute('aria-pressed',String(p));
+  muteBtn.setAttribute('aria-label',p?'Turn music off':'Turn music on');
+});
+
+/* ---------- opening sequence ---------- */
+const cover=$('cover'), env=$('envelope'), invite=$('invite');
+let opened=false;
+function openInvite(){
+  if(opened) return; opened=true;
+  env.classList.add('opening'); env.disabled=true;
+  document.querySelector('.env-hint').style.opacity='0';
+  setTimeout(()=>{
+    cover.classList.add('gone');
+    invite.setAttribute('aria-hidden','false');
+    document.body.style.overflow='';
+    window.scrollTo(0,0);
+    revealAll();
+  },1500);
+  /* The envelope tap is the user gesture browsers require, so the music
+     can start on its own from here — no play button needed. */
+  if(CONFIG.music){
+    Music.start();
+    setTimeout(()=>{muteBtn.classList.add('show')},2200);
+  }
+  setTimeout(()=>{cover.style.display='none'},2500);
+}
+env.addEventListener('click',openInvite);
+document.body.style.overflow='hidden';
+
+function revealAll(){
+  const els=[...document.querySelectorAll('.reveal')];
+  if(!('IntersectionObserver' in window)){els.forEach(e=>e.classList.add('in'));return}
+  const io=new IntersectionObserver(es=>{
+    es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target)}})
+  },{rootMargin:'0px 0px -12% 0px'});
+  els.forEach(e=>io.observe(e));
+  setTimeout(()=>{document.querySelector('.tier').classList.add('in')},60);
+}
+
+const up=$('up');
+up.addEventListener('click',()=>window.scrollTo({top:0,behavior:'smooth'}));
+window.addEventListener('scroll',()=>{up.classList.toggle('show',window.scrollY>700)},{passive:true});
+</script>
+</body>
+</html>
