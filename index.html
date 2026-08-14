@@ -302,6 +302,8 @@ a{color:inherit}
   box-shadow:inset 0 0 0 1px rgba(163,181,138,.6);
 }
 .ho-open{display:block;text-decoration:none;text-align:center}
+.ho-alt{color:var(--sage-deep);text-decoration:underline}
+.form-note b{color:var(--gold);font-style:normal}
 
 .form-note{font-family:var(--sans);font-size:11.5px;color:var(--ink-soft);text-align:center;margin:14px 0 0;line-height:1.7}
 
@@ -551,9 +553,15 @@ const CONFIG = {
   /* ---------------------------------------------------------------
      RSVP DELIVERY — Messenger
 
-     Set messengerUser to your Messenger link name (the part after
-     m.me/). Find it in Messenger: your profile > Username. If you
-     don't have one, use your numeric Facebook page/profile ID.
+     m.me/<username> only resolves if you actually have a Facebook
+     username set. If the button lands on the Messenger home page or
+     "content not available", you don't have one, or it differs from
+     your profile URL.
+
+     messengerId is the reliable route and always works. To find it:
+     open your Facebook profile in a desktop browser, view source
+     (Ctrl+U) and search for "userID" or "profile_id" — it's a long
+     number. Or use findmyfbid.in. Set it and it takes priority.
 
      The reply text is copied to the guest's clipboard and Messenger
      opens on your chat, so they only have to paste and send. Some
@@ -563,6 +571,7 @@ const CONFIG = {
      --------------------------------------------------------------- */
   rsvpMode      : "messenger",
   messengerUser : "JessieRieVidal",
+  messengerId   : "",     // numeric profile id — used first when set
   rsvpWhatsApp  : "",
   rsvpEmail     : "rsvp@example.com",
 
@@ -1389,8 +1398,12 @@ function copySync(text){
 
 /* Replaces the form with a copy-and-open panel. Messenger ignores ?text=
    on most builds, so the guest pastes instead of relying on prefill. */
+/* m.me accepts either a username or a numeric id; the id always
+   resolves, so prefer it when supplied. */
+const messengerURL = ()=>'https://m.me/'+encodeURIComponent(CONFIG.messengerId||CONFIG.messengerUser);
+
 function showHandoff(body, copied){
-  const url='https://m.me/'+encodeURIComponent(CONFIG.messengerUser);
+  const url=messengerURL();
   const wrap=document.querySelector('#rsvp .form');
   wrap.innerHTML=`
     <div class="handoff">
@@ -1398,8 +1411,10 @@ function showHandoff(body, copied){
       <textarea class="ho-text" id="hoText" readonly>${esc(body)}</textarea>
       <button class="ho-copy" id="hoCopy">${copied?'Copy again':'Copy reply'}</button>
       <p class="ho-step"><b>2</b> Open Messenger and paste it</p>
-      <a class="submit ho-open" href="${url}" target="_blank" rel="noopener">Open Messenger</a>
-      <p class="form-note">Tap and hold inside the message box to paste, then send.</p>
+      <a class="submit ho-open" href="${url}" rel="noopener">Open Messenger</a>
+      <p class="form-note">Tap and hold inside the message box to paste, then send.<br>
+        Messenger not opening? <a href="${url}" class="ho-alt">Use this link</a> or search
+        <b>${esc(CONFIG.messengerUser)}</b> in Messenger.</p>
     </div>`;
   const t=document.getElementById('hoText');
   document.getElementById('hoCopy').addEventListener('click',e=>{
