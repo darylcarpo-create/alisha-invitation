@@ -278,6 +278,31 @@ a{color:inherit}
 }
 .submit:hover{transform:translateY(-2px)}
 .submit:disabled{opacity:.45;transform:none;cursor:not-allowed}
+/* messenger handoff panel */
+.handoff{text-align:center}
+.ho-step{
+  display:flex;align-items:center;justify-content:center;gap:9px;
+  font-family:var(--sans);font-size:11.5px;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--gold);margin:0 0 12px;
+}
+.ho-step b{
+  width:20px;height:20px;border-radius:50%;display:grid;place-items:center;
+  background:var(--gold);color:#fff;font-size:11px;letter-spacing:0;
+}
+.ho-text{
+  width:100%;min-height:120px;resize:none;line-height:1.65;
+  font-family:var(--serif);font-size:14.5px;color:var(--ink);
+  background:rgba(255,255,255,.9);border:0;border-radius:10px;padding:14px;
+  box-shadow:inset 0 0 0 1px var(--line-pink);
+}
+.ho-copy{
+  width:100%;margin:10px 0 24px;padding:13px;border-radius:999px;
+  background:#fff;color:var(--sage-deep);
+  font-family:var(--sans);font-size:11.5px;letter-spacing:.16em;text-transform:uppercase;
+  box-shadow:inset 0 0 0 1px rgba(163,181,138,.6);
+}
+.ho-open{display:block;text-decoration:none;text-align:center}
+
 .form-note{font-family:var(--sans);font-size:11.5px;color:var(--ink-soft);text-align:center;margin:14px 0 0;line-height:1.7}
 
 .foot{padding:48px var(--pad) 76px;text-align:center}
@@ -967,6 +992,54 @@ $('gallery').innerHTML = CONFIG.gallery.map((g,i)=>
   tick(); setInterval(tick,1000);
 })();
 
+/* Synchronous clipboard copy. execCommand is deprecated but it is the only
+   method that works inside a click handler without an await, which is
+   exactly what mobile browsers require. Async clipboard is fired too but
+   never awaited, so it can't break the gesture chain. */
+function copySync(text){
+  let ok=false;
+  try{
+    const ta=document.createElement('textarea');
+    ta.value=text;
+    ta.setAttribute('readonly','');
+    ta.style.cssText='position:fixed;top:0;left:0;opacity:0;pointer-events:none';
+    document.body.appendChild(ta);
+    ta.select();
+    ta.setSelectionRange(0,text.length);      // iOS needs the explicit range
+    ok=document.execCommand('copy');
+    document.body.removeChild(ta);
+  }catch(e){ ok=false; }
+  if(navigator.clipboard && window.isSecureContext){
+    navigator.clipboard.writeText(text).catch(()=>{});   // deliberately not awaited
+  }
+  return ok;
+}
+
+/* Replaces the form with a copy-and-open panel. Messenger ignores ?text=
+   on most builds, so the guest pastes instead of relying on prefill. */
+function showHandoff(body, copied){
+  const url='https://m.me/'+encodeURIComponent(CONFIG.messengerUser);
+  const wrap=document.querySelector('#rsvp .form');
+  wrap.innerHTML=`
+    <div class="handoff">
+      <p class="ho-step"><b>1</b> ${copied?'Your reply is copied':'Copy your reply'}</p>
+      <textarea class="ho-text" id="hoText" readonly>${esc(body)}</textarea>
+      <button class="ho-copy" id="hoCopy">${copied?'Copy again':'Copy reply'}</button>
+      <p class="ho-step"><b>2</b> Open Messenger and paste it</p>
+      <a class="submit ho-open" href="${url}" target="_blank" rel="noopener">Open Messenger</a>
+      <p class="form-note">Tap and hold inside the message box to paste, then send.</p>
+    </div>`;
+  const t=document.getElementById('hoText');
+  document.getElementById('hoCopy').addEventListener('click',e=>{
+    const ok=copySync(body);
+    e.target.textContent = ok?'Copied':'Select the text above';
+    if(!ok){ t.focus(); t.select(); }
+    setTimeout(()=>{e.target.textContent='Copy again'},2500);
+  });
+  t.addEventListener('click',()=>{t.select()});
+  wrap.scrollIntoView({behavior:'smooth',block:'center'});
+}
+
 /* ---------- rsvp ---------- */
 (function(){
   let attending=null;
@@ -982,7 +1055,7 @@ $('gallery').innerHTML = CONFIG.gallery.map((g,i)=>
   }));
   nameI.addEventListener('input',validate);
 
-  send.addEventListener('click',async ()=>{
+  send.addEventListener('click',()=>{
     const data={
       name     : nameI.value.trim(),
       attending: attending==='yes'?'Yes':'No',
@@ -1004,28 +1077,13 @@ $('gallery').innerHTML = CONFIG.gallery.map((g,i)=>
 
     switch(CONFIG.rsvpMode){
       case 'messenger':{
-        /* Copy first so the guest can paste even if Messenger ignores
-           the prefill, then open the chat. */
-        let copied=false;
-        try{
-          if(navigator.clipboard && window.isSecureContext){
-            await navigator.clipboard.writeText(body); copied=true;
-          }else{
-            const ta=document.createElement('textarea');
-            ta.value=body; ta.style.position='fixed'; ta.style.opacity='0';
-            document.body.appendChild(ta); ta.select();
-            copied=document.execCommand('copy');
-            document.body.removeChild(ta);
-          }
-        }catch(e){ copied=false; }
-
-        window.open('https://m.me/'+encodeURIComponent(CONFIG.messengerUser)
-          +'?text='+encodeURIComponent(body),'_blank','noopener');
-
-        $('rsvpNote').textContent = copied
-          ? 'Your reply is copied — just paste it into the chat and send.'
-          : 'Messenger is opening. Type your reply in the chat to confirm.';
-        done('Opening Messenger…');
+        /* No await before this point: on iOS Safari and Chrome mobile an
+           await breaks the user-gesture chain, so the clipboard write is
+           refused and window.open is treated as a blocked popup. Copy
+           synchronously, then hand the guest an explicit link to tap. */
+        const copied = copySync(body);
+        showHandoff(body, copied);
+        done('Send my RSVP');
         break;
       }
       case 'whatsapp':
@@ -1042,7 +1100,7 @@ $('gallery').innerHTML = CONFIG.gallery.map((g,i)=>
   });
 
   $('rsvpNote').textContent = {
-    'messenger'   :'Sends your reply through Messenger.',
+    'messenger'   :'We\u2019ll copy your reply, then open Messenger for you.',
     'whatsapp'    :'Opens WhatsApp with your reply ready to send.',
     'email'       :'Opens your mail app with your reply ready to send.'
   }[CONFIG.rsvpMode] || 'Opens your mail app with your reply ready to send.';
