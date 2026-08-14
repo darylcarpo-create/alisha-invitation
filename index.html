@@ -1474,9 +1474,14 @@ function showHandoff(body, copied){
 const Music=(function(){
   let ctx,master,pad,padOsc=[],lookahead=null,bar=0,nextBarAt=0,on=false;
 
-  const BPM=84, BEAT=60/BPM, BAR=BEAT*4;
-  const SCHED_AHEAD=0.35;   // seconds of audio queued in advance
-  const TICK=40;            // ms between scheduler wake-ups
+  const BPM=100, BEAT=60/BPM, BAR=BEAT*4;
+  /* Queue two whole bars ahead. The page runs 60-odd SMIL animations and
+     a scroll handler, so a wake-up can easily be delayed by half a second;
+     with only 0.35s queued, bars were being scheduled with a timestamp
+     already in the past, and Web Audio fires those instantly, bunched.
+     That -- not the notes -- was the off-beat. */
+  const SCHED_AHEAD=(60/100)*4*2;   // two bars
+  const TICK=120;                   // ms between scheduler wake-ups
 
   /* Magical rather than metrical.
 
@@ -1497,7 +1502,7 @@ const Music=(function(){
     {root:38, arp:[62,66,69,73]},   // Dmaj7
     {root:30, arp:[64,69,73,76]},   // F#m7
     {root:31, arp:[62,67,71,74]},   // Gmaj7
-    {root:33, arp:[62,64,69,73]}    // Asus4 — leaves the phrase open
+    {root:33, arp:[61,64,69,71]}    // A7 — pulls back round to the top
   ];
   /* Eight subdivisions per bar, but notes only ever on the four beats.
      The odd slots stay empty by design, not by accident. */
@@ -1555,40 +1560,73 @@ const Music=(function(){
 
   const sparkle=t=>celesta(t,hz(86+((Math.random()*12)|0)),.026,1.3);
 
+  /* A soft heartbeat so the pulse is never in doubt: a warm low note on
+     beats one and three, a small bright chime on two and four. Both sit
+     exactly on the beat, which is what makes the whole thing feel steady
+     rather than floating. */
+  function pulseLow(t,f){
+    const o=ctx.createOscillator(),v=ctx.createGain(),flt=ctx.createBiquadFilter();
+    o.type='sine';o.frequency.setValueAtTime(f*1.6,t);
+    o.frequency.exponentialRampToValueAtTime(f,t+.06);
+    flt.type='lowpass';flt.frequency.value=420;
+    v.gain.setValueAtTime(0,t);
+    v.gain.linearRampToValueAtTime(.14,t+.008);
+    v.gain.exponentialRampToValueAtTime(.0001,t+.5);
+    o.connect(flt);flt.connect(v);v.connect(master);
+    o.start(t);o.stop(t+.55);
+  }
+  function pulseTick(t,f){
+    const o=ctx.createOscillator(),v=ctx.createGain();
+    o.type='triangle';o.frequency.value=f;
+    v.gain.setValueAtTime(0,t);
+    v.gain.linearRampToValueAtTime(.035,t+.005);
+    v.gain.exponentialRampToValueAtTime(.0001,t+.34);
+    o.connect(v);v.connect(master);
+    o.start(t);o.stop(t+.38);
+  }
+
   /* Everything below is scheduled against ctx.currentTime, never against
      wall-clock time, so a busy main thread can no longer nudge the beat. */
   function scheduleBar(t0){
     const c=CH[bar%CH.length], m=MEL[bar%MEL.length], tp=TOP[bar%TOP.length];
     const sub=BAR/8;
 
-    /* a harp rolling continuously through the chord — this carries the
-       motion, so nothing has to keep time by hitting hard */
+    /* the beat, dead on each quarter */
+    pulseLow(t0,            hz(c.root-24));
+    pulseLow(t0+2*BEAT,     hz(c.root-24));
+    pulseTick(t0+1*BEAT,    hz(c.arp[2]+12));
+    pulseTick(t0+3*BEAT,    hz(c.arp[3]+12));
+
+    /* harp rolling through the chord, carrying the sparkle between beats */
     const rollUp=[0,1,2,3,2,1,0,1], rollDn=[3,2,1,0,1,2,3,2];
     const roll = (bar%2) ? rollDn : rollUp;
-    for(let i=0;i<8;i++) harp(t0+i*sub, hz(c.arp[roll[i]]-12), .04, 1.6);
+    for(let i=0;i<8;i++) harp(t0+i*sub, hz(c.arp[roll[i]]-12), .038, 1.2);
 
     /* the root underneath, long and soft */
-    harp(t0, hz(c.root-12), .07, 3.2);
+    harp(t0, hz(c.root-12), .07, 2.6);
 
-    /* melody, always on a beat, ringing well past the next note */
-    for(let i=0;i<8;i++) if(m[i]!==null)  celesta(t0+i*sub, hz(m[i]),  .095, 2.4);
-    for(let i=0;i<8;i++) if(tp[i]!==null) celesta(t0+i*sub, hz(tp[i]), .038, 2.8);
+    /* melody, always on a beat, ringing past the next note */
+    for(let i=0;i<8;i++) if(m[i]!==null)  celesta(t0+i*sub, hz(m[i]),  .095, 2.0);
+    if(!LOWFX) for(let i=0;i<8;i++) if(tp[i]!==null) celesta(t0+i*sub, hz(tp[i]), .038, 2.4);
 
     padOsc.forEach((o,i)=>o.frequency.setTargetAtTime(hz(c.arp[i%c.arp.length]-24), t0, .55));
 
-    /* wind chimes drifting, deliberately unquantised so they read as
-       atmosphere rather than as part of the rhythm */
-    sparkle(t0+Math.random()*BAR);
-    if(Math.random()<.45) sparkle(t0+Math.random()*BAR);
+    /* wind chimes, unquantised so they read as atmosphere, not rhythm */
+    if(!LOWFX || bar%2===0) sparkle(t0+Math.random()*BAR);
 
     bar++;
   }
 
   function pump(){
     while(nextBarAt < ctx.currentTime + SCHED_AHEAD){
-      /* if the tab was backgrounded and the clock ran far ahead,
-         re-anchor instead of frantically catching up */
-      if(nextBarAt < ctx.currentTime - BAR) nextBarAt = ctx.currentTime + .05;
+      /* Nothing may ever be scheduled at or before the current time.
+         If we've fallen behind at all, drop the missed bar and re-anchor
+         to the next clean beat instead of dumping it out late. */
+      if(nextBarAt <= ctx.currentTime + .06){
+        const beatsLate=Math.ceil((ctx.currentTime+.06-nextBarAt)/BEAT);
+        nextBarAt += beatsLate*BEAT;
+        if(nextBarAt <= ctx.currentTime + .06) nextBarAt = ctx.currentTime + .12;
+      }
       scheduleBar(nextBarAt);
       nextBarAt += BAR;
     }
