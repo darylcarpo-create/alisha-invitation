@@ -292,11 +292,32 @@ a{color:inherit}
 }
 .submit:hover{transform:translateY(-2px)}
 .submit:disabled{opacity:.45;transform:none;cursor:not-allowed}
-/* thank-you panel */
-.thanks{text-align:center;padding:10px 0 6px}
-.thanks .tick{width:64px;height:64px;margin:0 auto 14px;display:block}
-.thanks-h{font-family:var(--script);font-size:clamp(34px,9vw,44px);color:var(--gold);margin:0 0 8px;line-height:1}
-.thanks-b{font-size:16px;line-height:1.7;color:var(--ink);margin:0}
+/* messenger handoff panel */
+.handoff{text-align:center}
+.ho-step{
+  display:flex;align-items:center;justify-content:center;gap:9px;
+  font-family:var(--sans);font-size:11.5px;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--gold);margin:0 0 12px;
+}
+.ho-step b{
+  width:20px;height:20px;border-radius:50%;display:grid;place-items:center;
+  background:var(--gold);color:#fff;font-size:11px;letter-spacing:0;
+}
+.ho-text{
+  width:100%;min-height:120px;resize:none;line-height:1.65;
+  font-family:var(--serif);font-size:14.5px;color:var(--ink);
+  background:rgba(255,255,255,.9);border:0;border-radius:10px;padding:14px;
+  box-shadow:inset 0 0 0 1px var(--line-pink);
+}
+.ho-copy{
+  width:100%;margin:10px 0 24px;padding:13px;border-radius:999px;
+  background:#fff;color:var(--sage-deep);
+  font-family:var(--sans);font-size:11.5px;letter-spacing:.16em;text-transform:uppercase;
+  box-shadow:inset 0 0 0 1px rgba(163,181,138,.6);
+}
+.ho-open{display:block;text-decoration:none;text-align:center}
+.ho-alt{color:var(--sage-deep);text-decoration:underline}
+.form-note b{color:var(--gold);font-style:normal}
 
 .form-note{font-family:var(--sans);font-size:11.5px;color:var(--ink-soft);text-align:center;margin:14px 0 0;line-height:1.7}
 
@@ -559,29 +580,34 @@ const CONFIG = {
   rsvpBy    : "August 30, 2026",
 
   /* ---------------------------------------------------------------
-     RSVP DELIVERY  —  straight into your GitHub repo
+     RSVP DELIVERY — Messenger
 
-     "endpoint" posts the reply to your relay, which files it into the
-     repo for you. Guests need no account, no app, nothing installed:
-     they press Send and they're done.
+     m.me/<username> only resolves if you actually have a Facebook
+     username set. If the button lands on the Messenger home page or
+     "content not available", you don't have one, or it differs from
+     your profile URL.
 
-     Why a relay? GitHub Pages is a static host and cannot receive a
-     POST, and a GitHub token must never live in this file — the page is
-     public, and GitHub's secret scanning would revoke a leaked token
-     within minutes. The relay is a free Cloudflare Worker holding the
-     token server-side. Setup is about five minutes; the Worker code and
-     step-by-step are in rsvp-worker/.
+     On iOS, messengerId is REQUIRED, not optional — without it the
+     button can only use a web link, and iOS may route that to the App
+     Store instead of the app. With it, the page opens Messenger through
+     its own URL scheme and bypasses the problem.
 
-     Put the Worker URL here, e.g.
-       "https://alisha-rsvp.yourname.workers.dev"
+     To find it:
+     open your Facebook profile in a desktop browser, view source
+     (Ctrl+U) and search for "userID" or "profile_id" — it's a long
+     number. Or use findmyfbid.in. Set it and it takes priority.
 
-     Fallbacks if ever needed: "whatsapp", "email".
+     The reply text is copied to the guest's clipboard and Messenger
+     opens on your chat, so they only have to paste and send. Some
+     Messenger builds also accept the prefilled text directly.
+
+     Other modes if you ever want them: "whatsapp", "email".
      --------------------------------------------------------------- */
-  rsvpMode     : "endpoint",
-  rsvpEndpoint : "https://alisha-rsvp.daryl-c.workers.dev/",
-
-  rsvpWhatsApp : "",
-  rsvpEmail    : "rsvp@example.com",
+  rsvpMode      : "messenger",
+  messengerUser : "JessieRieVidal",
+  messengerId   : "100000265261760",   // numeric profile id — used first, and required on iOS
+  rsvpWhatsApp  : "",
+  rsvpEmail     : "rsvp@example.com",
 
   music: true,   // starts by itself the moment the envelope opens
 
@@ -1383,27 +1409,86 @@ $('gallery').innerHTML = CONFIG.gallery.map((g,i)=>{
   tick(); setInterval(tick,1000);
 })();
 
-/* Swaps the form for a confirmation once the reply is safely filed. */
-function showThanks(){
-  const wrap=document.querySelector('#rsvp .form');
-  wrap.innerHTML=`
-    <div class="thanks">
-      <svg viewBox="0 0 64 64" aria-hidden="true" class="tick">
-        <circle cx="32" cy="32" r="29" fill="none" stroke="var(--sage)" stroke-width="2" opacity=".45"/>
-        <path d="M20 33.5 L28.5 42 L45 24" fill="none" stroke="var(--sage-deep)"
-              stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"
-              pathLength="1" stroke-dasharray="1" stroke-dashoffset="1">
-          <animate attributeName="stroke-dashoffset" from="1" to="0" dur=".55s"
-                   fill="freeze" calcMode="spline" keySplines=".3 0 .2 1"/>
-        </path>
-      </svg>
-      <p class="thanks-h">Thank you</p>
-      <p class="thanks-b">Your reply has been sent to the family.<br>
-        We can\u2019t wait to celebrate with you.</p>
-    </div>`;
-  if(wrap.scrollIntoView) wrap.scrollIntoView({behavior:'smooth',block:'center'});
+/* Synchronous clipboard copy. execCommand is deprecated but it is the only
+   method that works inside a click handler without an await, which is
+   exactly what mobile browsers require. Async clipboard is fired too but
+   never awaited, so it can't break the gesture chain. */
+function copySync(text){
+  let ok=false;
+  try{
+    const ta=document.createElement('textarea');
+    ta.value=text;
+    ta.setAttribute('readonly','');
+    ta.style.cssText='position:fixed;top:0;left:0;opacity:0;pointer-events:none';
+    document.body.appendChild(ta);
+    ta.select();
+    ta.setSelectionRange(0,text.length);      // iOS needs the explicit range
+    ok=document.execCommand('copy');
+    document.body.removeChild(ta);
+  }catch(e){ ok=false; }
+  if(navigator.clipboard && window.isSecureContext){
+    navigator.clipboard.writeText(text).catch(()=>{});   // deliberately not awaited
+  }
+  return ok;
 }
 
+/* Replaces the form with a copy-and-open panel. Messenger ignores ?text=
+   on most builds, so the guest pastes instead of relying on prefill. */
+/* m.me accepts either a username or a numeric id; the id always
+   resolves, so prefer it when supplied. */
+const messengerURL = ()=>'https://m.me/'+encodeURIComponent(CONFIG.messengerId||CONFIG.messengerUser);
+
+const IS_IOS = /iPad|iPhone|iPod/.test(navigator.userAgent)
+            || (navigator.platform==='MacIntel' && navigator.maxTouchPoints>1);
+
+/* iOS sends m.me links to the App Store when its Universal Link handoff
+   isn't firing -- which happens once you've ever tapped the "Safari"
+   breadcrumb on that domain, since iOS then remembers to keep the domain
+   in the browser forever. Safari has no way to undo that from a page.
+
+   The custom scheme sidesteps Universal Links entirely and opens the app
+   directly. It needs the numeric id, not a username. If the app doesn't
+   pick it up within a moment or so, we fall back to the web link. */
+function openMessenger(e){
+  if(!IS_IOS || !CONFIG.messengerId) return;      // plain href handles it
+  e.preventDefault();
+  const web=messengerURL();
+  let gone=false;
+  const mark=()=>{ gone=true; };
+  document.addEventListener('visibilitychange',mark,{once:true});
+  window.addEventListener('pagehide',mark,{once:true});
+  window.location.href='fb-messenger://user-thread/'+encodeURIComponent(CONFIG.messengerId);
+  setTimeout(()=>{
+    document.removeEventListener('visibilitychange',mark);
+    if(!gone && !document.hidden) window.location.href=web;   // app didn't take it
+  },1500);
+}
+
+function showHandoff(body, copied){
+  const url=messengerURL();
+  const wrap=document.querySelector('#rsvp .form');
+  wrap.innerHTML=`
+    <div class="handoff">
+      <p class="ho-step"><b>1</b> ${copied?'Your reply is copied':'Copy your reply'}</p>
+      <textarea class="ho-text" id="hoText" readonly>${esc(body)}</textarea>
+      <button class="ho-copy" id="hoCopy">${copied?'Copy again':'Copy reply'}</button>
+      <p class="ho-step"><b>2</b> Open Messenger and paste it</p>
+      <a class="submit ho-open" href="${url}" rel="noopener">Open Messenger</a>
+      <p class="form-note">Tap and hold inside the message box to paste, then send.<br>
+        Messenger not opening? <a href="${url}" class="ho-alt">Use this link</a> or search
+        <b>${esc(CONFIG.messengerUser)}</b> in Messenger.</p>
+    </div>`;
+  wrap.querySelectorAll('.ho-open,.ho-alt').forEach(a=>a.addEventListener('click',openMessenger));
+  const t=document.getElementById('hoText');
+  document.getElementById('hoCopy').addEventListener('click',e=>{
+    const ok=copySync(body);
+    e.target.textContent = ok?'Copied':'Select the text above';
+    if(!ok){ t.focus(); t.select(); }
+    setTimeout(()=>{e.target.textContent='Copy again'},2500);
+  });
+  t.addEventListener('click',()=>{t.select()});
+  wrap.scrollIntoView({behavior:'smooth',block:'center'});
+}
 
 /* ---------- rsvp ---------- */
 (function(){
@@ -1439,49 +1524,34 @@ function showThanks(){
     const title=`RSVP — ${data.attending}`;
 
     switch(CONFIG.rsvpMode){
-      case 'endpoint':{
-        if(!CONFIG.rsvpEndpoint){
-          $('rsvpNote').textContent='RSVP isn\u2019t set up yet \u2014 no endpoint configured.';
-          done('Send my RSVP'); return;
-        }
-        send.disabled=true; send.textContent='Sending\u2026';
-        fetch(CONFIG.rsvpEndpoint,{
-          method:'POST',
-          headers:{'Content-Type':'application/json'},
-          body:JSON.stringify(data)
-        })
-        .then(r=>{ if(!r.ok) throw new Error(r.status); return r.text(); })
-        .then(
-          ()=>showThanks(),
-          ()=>{
-            /* only a genuine send failure lands here — an error thrown while
-               drawing the thank-you panel must never be reported as one */
-            send.disabled=false;
-            send.textContent='Try again';
-            const n=$('rsvpNote');
-            if(n) n.textContent='That didn\u2019t go through. Check your connection and try once more.';
-          }
-        );
+      case 'messenger':{
+        /* No await before this point: on iOS Safari and Chrome mobile an
+           await breaks the user-gesture chain, so the clipboard write is
+           refused and window.open is treated as a blocked popup. Copy
+           synchronously, then hand the guest an explicit link to tap. */
+        const copied = copySync(body);
+        showHandoff(body, copied);
+        done('Send my RSVP');
         break;
       }
       case 'whatsapp':
         window.open('https://wa.me/'+CONFIG.rsvpWhatsApp.replace(/\D/g,'')
           +'?text='+encodeURIComponent(body),'_blank','noopener');
-        done('Opening WhatsApp\u2026');
+        done('Opening WhatsApp…');
         break;
       default:
         window.location.href='mailto:'+encodeURIComponent(CONFIG.rsvpEmail)
           +'?subject='+encodeURIComponent(title)
           +'&body='+encodeURIComponent(body);
-        done('Opening your mail app\u2026');
+        done('Opening your mail app…');
     }
   });
 
   $('rsvpNote').textContent = {
-    'endpoint' :'Your reply goes straight to the family. Nothing to install.',
-    'whatsapp' :'Opens WhatsApp with your reply ready to send.',
-    'email'    :'Opens your mail app with your reply ready to send.'
-  }[CONFIG.rsvpMode] || 'Your reply goes straight to the family.';
+    'messenger'   :'We\u2019ll copy your reply, then open Messenger for you.',
+    'whatsapp'    :'Opens WhatsApp with your reply ready to send.',
+    'email'       :'Opens your mail app with your reply ready to send.'
+  }[CONFIG.rsvpMode] || 'Opens your mail app with your reply ready to send.';
 })();
 
 /* ============================================================
@@ -1724,54 +1794,10 @@ const Music=(function(){
    score. Same interface, so the mute button and the envelope-open
    trigger work either way. */
 const Track=(function(){
-  let ctx=null, gain=null, buf=null, node=null, el=null, on=false, loading=false;
+  let ctx=null, gain=null, buf=null, node=null, on=false, loading=false, el=null;
 
-  const vol=()=>Math.min(1,Math.max(0,CONFIG.musicVolume==null?.55:CONFIG.musicVolume));
+  const target=()=>Math.min(1,Math.max(0,CONFIG.musicVolume==null?.55:CONFIG.musicVolume));
 
-  /* ---------------- iOS: HTML audio element ----------------
-     Two reasons iOS gets its own path.
-
-     1. Web Audio output on iOS is silenced by the hardware ring/silent
-        switch. An <audio> element plays in the media category and is not.
-        A phone on silent is the single most common reason a page has sound
-        on a laptop and none on an iPhone.
-
-     2. Playback has to actually begin inside the tap. The Web Audio path
-        fetches and decodes first, which finishes long after the gesture
-        has ended, and iOS then refuses to make a sound.
-
-     The tradeoff is the loop seam: an element loop replays the MP3's
-     encoder padding, roughly 25ms of silence. Barely there on an ambient
-     harp, and worth it for actually being audible. */
-  function elStart(){
-    if(!el){
-      el=document.createElement('audio');
-      el.src=CONFIG.musicFile;
-      el.loop=true;
-      el.preload='auto';
-      el.setAttribute('playsinline','');
-      el.volume=0;
-      document.body.appendChild(el);
-    }
-    const p=el.play();
-    if(p&&p.catch) p.catch(()=>{ failed(); });
-    let v=0, t=vol();
-    const step=setInterval(()=>{
-      if(!on){ clearInterval(step); return; }
-      v=Math.min(t,v+t/24); el.volume=v;
-      if(v>=t) clearInterval(step);
-    },90);
-  }
-  function elStop(){
-    if(!el) return;
-    let v=el.volume;
-    const step=setInterval(()=>{
-      v=Math.max(0,v-.07); el.volume=v;
-      if(v<=0){ el.pause(); clearInterval(step); }
-    },40);
-  }
-
-  /* ---------------- everywhere else: Web Audio, gapless ---------------- */
   function ramp(to,secs){
     if(!gain) return;
     const t=ctx.currentTime;
@@ -1779,68 +1805,58 @@ const Track=(function(){
     gain.gain.setValueAtTime(gain.gain.value,t);
     gain.gain.linearRampToValueAtTime(to,t+secs);
   }
+
   function play(){
     if(node||!buf) return;
     node=ctx.createBufferSource();
     node.buffer=buf;
     node.loop=true;
+    /* the important bit: loop the musical length, not the decoded
+       length, so MP3 encoder padding never gets played */
     const L=CONFIG.musicLoopSeconds;
     if(L && buf.duration>L){ node.loopStart=0; node.loopEnd=L; }
     node.connect(gain);
     node.start();
-    ramp(vol(),2.2);
-  }
-  /* a single silent sample, played inside the gesture, is what actually
-     unlocks the context — resume() alone is not always enough */
-  function unlock(){
-    try{
-      const b=ctx.createBuffer(1,1,22050);
-      const sNode=ctx.createBufferSource();
-      sNode.buffer=b; sNode.connect(ctx.destination); sNode.start(0);
-    }catch(e){}
+    ramp(target(),2.2);
   }
 
-  /* if nothing could start by itself, surface the control so one tap does */
-  function failed(){
-    const b=document.getElementById('mute');
-    if(b){ b.classList.add('show','off'); b.setAttribute('aria-pressed','false'); }
+  /* if fetch is unavailable — opening the file straight off disk with
+     file:// blocks it — fall back to a plain <audio> element */
+  function fallback(){
+    if(el) return;
+    el=new Audio(CONFIG.musicFile);
+    el.loop=true; el.volume=target();
+    el.play().catch(()=>{});
   }
 
   return{
     get available(){ return !!CONFIG.musicFile },
-    get playing(){ return on },
-
     start(){
       on=true;
-      if(IS_IOS){ elStart(); return true; }
-
       if(!ctx){
         try{
           ctx=new (window.AudioContext||window.webkitAudioContext)();
           gain=ctx.createGain(); gain.gain.value=0; gain.connect(ctx.destination);
-        }catch(e){ elStart(); return true; }
+        }catch(e){ fallback(); return true; }
       }
-      if(ctx.state==='suspended') ctx.resume().catch(()=>{});
-      unlock();
-
+      if(ctx.state==='suspended') ctx.resume();
       if(buf){ play(); return true; }
       if(!loading){
         loading=true;
         fetch(CONFIG.musicFile)
           .then(r=>{ if(!r.ok) throw new Error(r.status); return r.arrayBuffer(); })
           .then(a=>new Promise((res,rej)=>{
-            const pr=ctx.decodeAudioData(a,res,rej);
-            if(pr&&pr.then) pr.then(res,rej);      // older Safari lacks the promise form
+            const p=ctx.decodeAudioData(a,res,rej);
+            if(p&&p.then) p.then(res,rej);        // older Safari has no promise form
           }))
           .then(b=>{ buf=b; loading=false; if(on) play(); })
-          .catch(()=>{ loading=false; if(on) elStart(); });   // fall back to the element
+          .catch(()=>{ loading=false; if(on) fallback(); });
       }
       return true;
     },
-
     stop(){
       on=false;
-      elStop();
+      if(el){ el.pause(); }
       if(node){
         ramp(0,.5);
         const n=node; node=null;
@@ -1848,8 +1864,8 @@ const Track=(function(){
       }
       return false;
     },
-
-    toggle(){ return on?this.stop():this.start() }
+    toggle(){ return on?this.stop():this.start() },
+    get playing(){ return on }
   };
 })();
 
@@ -1865,7 +1881,6 @@ const Audio$ = {
 const muteBtn=$('mute');
 muteBtn.addEventListener('click',()=>{
   const p=Audio$.toggle();
-  muteBtn.classList.add('show');
   muteBtn.classList.toggle('off',!p);
   muteBtn.setAttribute('aria-pressed',String(p));
   muteBtn.setAttribute('aria-label',p?'Turn music off':'Turn music on');
@@ -1889,10 +1904,7 @@ function openInvite(){
      can start on its own from here — no play button needed. */
   if(CONFIG.music){
     Audio$.start();
-    /* show the control straight away rather than after a delay: if the
-       browser refused to start audio, this button is the one tap that
-       will, and it needs to be there to be found */
-    muteBtn.classList.add('show');
+    setTimeout(()=>{muteBtn.classList.add('show')},2200);
   }
   setTimeout(()=>{cover.style.display='none'},2500);
 }

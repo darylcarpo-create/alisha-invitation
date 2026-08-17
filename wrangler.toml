@@ -1,0 +1,8 @@
+name = "alisha-rsvp"
+main = "worker.js"
+compatibility_date = "2024-11-01"
+
+[vars]
+# your repo, and the exact origin the invitation is served from
+REPO = "darylcarpo-create/alisha-invitation"
+ALLOW_ORIGIN = "https://darylcarpo-create.github.io"
