@@ -1742,88 +1742,55 @@ const Music=(function(){
 
 /* If CONFIG.musicFile is set, that file plays instead of the built-in
    score. Same interface, so the mute button and the envelope-open
-   trigger work either way. */
+   trigger work either way.
+
+   This is deliberately an <audio> element on every platform, not Web
+   Audio. The Web Audio route gave a perfectly gapless loop but had too
+   many ways to end in silence: it has to fetch and decode the whole file
+   before it can make a sound, which lands long after the tap that
+   authorised it, and any failure in that chain is silent. An element
+   starts playing inside the tap, on every browser, and on iOS it also
+   plays in the media category so the ring/silent switch doesn't mute it.
+
+   The cost is the loop seam — an element replays the MP3's encoder
+   padding, about 25ms of silence every 13.7 seconds. Barely perceptible
+   on an ambient harp, and a fair trade for audio that actually plays. */
 const Track=(function(){
-  let ctx=null, gain=null, buf=null, node=null, el=null, on=false, loading=false;
+  let el=null, on=false, fading=null;
 
   const vol=()=>Math.min(1,Math.max(0,CONFIG.musicVolume==null?.55:CONFIG.musicVolume));
 
-  /* ---------------- iOS: HTML audio element ----------------
-     Two reasons iOS gets its own path.
-
-     1. Web Audio output on iOS is silenced by the hardware ring/silent
-        switch. An <audio> element plays in the media category and is not.
-        A phone on silent is the single most common reason a page has sound
-        on a laptop and none on an iPhone.
-
-     2. Playback has to actually begin inside the tap. The Web Audio path
-        fetches and decodes first, which finishes long after the gesture
-        has ended, and iOS then refuses to make a sound.
-
-     The tradeoff is the loop seam: an element loop replays the MP3's
-     encoder padding, roughly 25ms of silence. Barely there on an ambient
-     harp, and worth it for actually being audible. */
-  function elStart(){
-    if(!el){
-      el=document.createElement('audio');
-      el.src=CONFIG.musicFile;
-      el.loop=true;
-      el.preload='auto';
-      el.setAttribute('playsinline','');
-      el.volume=0;
-      document.body.appendChild(el);
-    }
-    const p=el.play();
-    if(p&&p.catch) p.catch(()=>{ failed(); });
-    let v=0, t=vol();
-    const step=setInterval(()=>{
-      if(!on){ clearInterval(step); return; }
-      v=Math.min(t,v+t/24); el.volume=v;
-      if(v>=t) clearInterval(step);
-    },90);
-  }
-  function elStop(){
-    if(!el) return;
-    let v=el.volume;
-    const step=setInterval(()=>{
-      v=Math.max(0,v-.07); el.volume=v;
-      if(v<=0){ el.pause(); clearInterval(step); }
-    },40);
-  }
-
-  /* ---------------- everywhere else: Web Audio, gapless ---------------- */
-  function ramp(to,secs){
-    if(!gain) return;
-    const t=ctx.currentTime;
-    gain.gain.cancelScheduledValues(t);
-    gain.gain.setValueAtTime(gain.gain.value,t);
-    gain.gain.linearRampToValueAtTime(to,t+secs);
-  }
-  function play(){
-    if(node||!buf) return;
-    node=ctx.createBufferSource();
-    node.buffer=buf;
-    node.loop=true;
-    const L=CONFIG.musicLoopSeconds;
-    if(L && buf.duration>L){ node.loopStart=0; node.loopEnd=L; }
-    node.connect(gain);
-    node.start();
-    ramp(vol(),2.2);
-  }
-  /* a single silent sample, played inside the gesture, is what actually
-     unlocks the context — resume() alone is not always enough */
-  function unlock(){
-    try{
-      const b=ctx.createBuffer(1,1,22050);
-      const sNode=ctx.createBufferSource();
-      sNode.buffer=b; sNode.connect(ctx.destination); sNode.start(0);
-    }catch(e){}
-  }
-
-  /* if nothing could start by itself, surface the control so one tap does */
-  function failed(){
+  /* the control doubles as the recovery path when autoplay is refused */
+  function showControl(playing){
     const b=document.getElementById('mute');
-    if(b){ b.classList.add('show','off'); b.setAttribute('aria-pressed','false'); }
+    if(!b) return;
+    b.classList.add('show');
+    b.classList.toggle('off',!playing);
+    b.setAttribute('aria-pressed',String(!!playing));
+  }
+
+  function build(){
+    el=document.createElement('audio');
+    el.src=CONFIG.musicFile;
+    el.loop=true;
+    el.preload='auto';
+    el.volume=0;
+    el.setAttribute('playsinline','');       // iOS: don't hand off to fullscreen
+    el.addEventListener('error',()=>{
+      console.error('music: could not load',CONFIG.musicFile,el.error);
+      showControl(false);
+    });
+    document.body.appendChild(el);
+  }
+
+  function fadeTo(target,done){
+    clearInterval(fading);
+    fading=setInterval(()=>{
+      const step=target>el.volume?.04:-.06;
+      let v=el.volume+step;
+      if((step>0&&v>=target)||(step<0&&v<=target)){ v=target; clearInterval(fading); if(done) done(); }
+      el.volume=Math.min(1,Math.max(0,v));
+    },70);
   }
 
   return{
@@ -1831,41 +1798,29 @@ const Track=(function(){
     get playing(){ return on },
 
     start(){
+      if(!el) build();
       on=true;
-      if(IS_IOS){ elStart(); return true; }
-
-      if(!ctx){
-        try{
-          ctx=new (window.AudioContext||window.webkitAudioContext)();
-          gain=ctx.createGain(); gain.gain.value=0; gain.connect(ctx.destination);
-        }catch(e){ elStart(); return true; }
-      }
-      if(ctx.state==='suspended') ctx.resume().catch(()=>{});
-      unlock();
-
-      if(buf){ play(); return true; }
-      if(!loading){
-        loading=true;
-        fetch(CONFIG.musicFile)
-          .then(r=>{ if(!r.ok) throw new Error(r.status); return r.arrayBuffer(); })
-          .then(a=>new Promise((res,rej)=>{
-            const pr=ctx.decodeAudioData(a,res,rej);
-            if(pr&&pr.then) pr.then(res,rej);      // older Safari lacks the promise form
-          }))
-          .then(b=>{ buf=b; loading=false; if(on) play(); })
-          .catch(()=>{ loading=false; if(on) elStart(); });   // fall back to the element
+      el.volume=0;
+      const p=el.play();
+      if(p&&p.then){
+        p.then(()=>{ fadeTo(vol()); showControl(true); })
+         .catch(err=>{
+           /* autoplay refused, or no gesture credit left — the button
+              is now the one tap that will start it */
+           console.warn('music: autoplay refused —',err&&err.name);
+           on=false;
+           showControl(false);
+         });
+      }else{
+        fadeTo(vol()); showControl(true);      // older browsers return nothing
       }
       return true;
     },
 
     stop(){
       on=false;
-      elStop();
-      if(node){
-        ramp(0,.5);
-        const n=node; node=null;
-        setTimeout(()=>{ try{ n.stop(); n.disconnect(); }catch(e){} },700);
-      }
+      if(el) fadeTo(0,()=>el.pause());
+      showControl(false);
       return false;
     },
 
