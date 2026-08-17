@@ -245,24 +245,10 @@ a{color:inherit}
 .verse-ref{font-family:var(--sans);font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--gold)}
 
 /* ---------- gallery ---------- */
-.gal{display:grid;grid-template-columns:1fr 1fr;gap:12px;max-width:460px;margin:0 auto}
+.gal{display:grid;grid-template-columns:1fr 1fr;gap:10px;max-width:460px;margin:0 auto}
 .gal figure{margin:0;border-radius:10px;overflow:hidden;aspect-ratio:3/4;background:#fdeef1;
   box-shadow:0 0 0 4px #fff,0 10px 26px -18px rgba(160,110,60,.9)}
-/* the last frame is the finale — full width, wider crop */
-.gal figure:last-child{grid-column:1/-1;aspect-ratio:4/3}
-/* month label, sitting on a scalloped icing tag */
-.gal figure{position:relative}
-.gal figcaption{
-  position:absolute;left:50%;bottom:8px;transform:translateX(-50%);
-  padding:4px 12px;border-radius:999px;white-space:nowrap;
-  background:rgba(255,255,255,.92);
-  font-family:var(--sans);font-size:9.5px;letter-spacing:.16em;text-transform:uppercase;
-  color:var(--gold);box-shadow:0 4px 12px -6px rgba(160,110,60,.8);
-}
-.gal figure:last-child figcaption{font-size:11px;padding:6px 16px;bottom:12px}
-/* frames still waiting for a photo read as quietly empty, not broken */
-.gal figure.empty{box-shadow:0 0 0 4px #fff,inset 0 0 0 1px var(--line-pink)}
-.gal figure.empty figcaption{background:rgba(255,255,255,.75);color:var(--ink-soft)}
+.gal figure:first-child{grid-column:1/-1;aspect-ratio:4/3}
 .gal img{width:100%;height:100%;object-fit:cover;transition:transform .8s cubic-bezier(.2,.8,.2,1)}
 .gal figure:hover img{transform:scale(1.05)}
 
@@ -558,22 +544,7 @@ const CONFIG = {
   verseRef  : "",
 
   heroPhoto : "photos/hero.jpg",
-  /* Eleven frames — one per month. Leave src as "" and the frame shows a
-     placeholder, so the months you haven't shot yet still hold their spot.
-     The last frame runs full width as the finale. */
-  gallery   : [
-    { label:"1 month",   src:"photos/alisha-01mo.jpg" },
-    { label:"2 months",  src:"photos/alisha-02mo.jpg" },
-    { label:"3 months",  src:"photos/alisha-03mo.jpg" },
-    { label:"4 months",  src:"photos/alisha-04mo.jpg" },
-    { label:"5 months",  src:"photos/alisha-05mo.jpg" },
-    { label:"6 months",  src:"photos/alisha-06mo.jpg" },
-    { label:"7 months",  src:"photos/alisha-07mo.jpg" },
-    { label:"8 months",  src:"photos/alisha-08mo.jpg" },
-    { label:"9 months",  src:"photos/alisha-09mo.jpg" },
-    { label:"10 months", src:"photos/alisha-10mo.jpg" },
-    { label:"11 months", src:"photos/alisha-11mo.jpg" }
-  ],
+  gallery   : ["photos/g1.jpg","photos/g2.jpg","photos/g3.jpg","photos/g4.jpg","photos/g5.jpg"],
 
   giftNote  : "Your presence is the sweetest gift of all. Should you wish to bring a gift, a little something for Alisha would be warmly appreciated.",
 
@@ -1376,14 +1347,8 @@ $('venues').innerHTML = CONFIG.venues.map(v=>`
       Open in Maps</a>`:''}
   </div>`).join('');
 
-$('gallery').innerHTML = CONFIG.gallery.map((g,i)=>{
-  /* accepts either {label,src} or a bare url string */
-  const src   = typeof g==='string' ? g : (g.src||'');
-  const label = typeof g==='string' ? '' : (g.label||'');
-  return `<figure${src?'':' class="empty"'}>${photo(src, CONFIG.celebrant+(label?' at '+label:''))}`
-       + (label?`<figcaption>${esc(label)}</figcaption>`:'')
-       + `</figure>`;
-}).join('');
+$('gallery').innerHTML = CONFIG.gallery.map((g,i)=>
+  `<figure>${photo(g,CONFIG.celebrant+' photo '+(i+1))}</figure>`).join('');
 
 /* ---------- countdown ---------- */
 (function(){
