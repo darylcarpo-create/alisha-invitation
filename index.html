@@ -544,10 +544,10 @@ const CONFIG = {
     { label:"1 month",   src:"photos/alisha-01mo.jpg" },
     { label:"2 months",  src:"photos/alisha-02mo.jpg" },
     { label:"3 months",  src:"photos/alisha-03mo.jpg" },
-    { label:"4 months",  src:"" },
+    { label:"4 months",  src:"photos/alisha-04mo.jpg" },
     { label:"5 months",  src:"photos/alisha-05mo.jpg" },
-    { label:"6 months",  src:"" },
-    { label:"7 months",  src:"" },
+    { label:"6 months",  src:"photos/alisha-06mo.jpg" },
+    { label:"7 months",  src:"photos/alisha-07mo.jpg" },
     { label:"8 months",  src:"photos/alisha-08mo.jpg" },
     { label:"9 months",  src:"photos/alisha-09mo.jpg" },
     { label:"10 months", src:"photos/alisha-10mo.jpg" },
@@ -728,6 +728,10 @@ const CONFIG = {
       <h3 class="script-h">RSVP</h3>
       <p class="body" style="margin-bottom:26px" id="rsvpIntro"></p>
       <div class="form">
+        <div class="field">
+          <label for="f-name">Your name</label>
+          <input id="f-name" type="text" autocomplete="name" placeholder="Maria Santos">
+        </div>
         <div class="field">
           <label>Will you celebrate with us?</label>
           <div class="choice" id="attend">
@@ -1409,9 +1413,11 @@ function showThanks(){
 (function(){
   let attending=null;
   const btns=[...document.querySelectorAll('#attend button')];
-  const send=$('sendRsvp'), gField=$('guestsField');
-  /* Messenger already tells us who sent it, so there's no name to ask for */
-  const validate=()=>{send.disabled=!attending};
+  const send=$('sendRsvp'), nameI=$('f-name'), gField=$('guestsField');
+  /* the relay has no idea who is writing, so the name is required */
+  const validate=()=>{send.disabled=!(attending && nameI.value.trim().length>1)};
+
+  nameI.addEventListener('input',validate);
 
   btns.forEach(b=>b.addEventListener('click',()=>{
     attending=b.dataset.v;
@@ -1422,6 +1428,7 @@ function showThanks(){
 
   send.addEventListener('click',()=>{
     const data={
+      name     : nameI.value.trim(),
       attending: attending==='yes'?'Yes':'No',
       guests   : attending==='yes' ? $('f-guests').value : '0',
       message  : $('f-msg').value.trim(),
@@ -1430,13 +1437,14 @@ function showThanks(){
     };
     const body=[
       `RSVP — ${data.event}`,
+      `Name: ${data.name}`,
       `Attending: ${data.attending}`,
       data.attending==='Yes'?`Guests: ${data.guests}`:null,
       data.message?`Message: ${data.message}`:null
     ].filter(Boolean).join('\n');
 
     const done=t=>{send.textContent=t;setTimeout(()=>{send.textContent='Send my RSVP'},5000)};
-    const title=`RSVP — ${data.attending}`;
+    const title=`RSVP — ${data.name} (${data.attending})`;
 
     switch(CONFIG.rsvpMode){
       case 'endpoint':{
