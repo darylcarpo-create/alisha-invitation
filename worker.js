@@ -30,6 +30,35 @@ export default {
     };
 
     if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors });
+
+    /* Open /check in a browser to see what the Worker can actually see.
+       Never prints the token itself — only whether one is present. */
+    if (request.method === 'GET' && new URL(request.url).pathname === '/check') {
+      const probe = env.GITHUB_TOKEN && env.REPO
+        ? await fetch(`https://api.github.com/repos/${env.REPO}`, {
+            headers: {
+              Authorization: `Bearer ${env.GITHUB_TOKEN}`,
+              Accept: 'application/vnd.github+json',
+              'User-Agent': 'alisha-rsvp-worker',
+            },
+          }).then(r => ({ status: r.status, ok: r.ok }))
+            .catch(e => ({ error: String(e) }))
+        : { skipped: 'REPO or GITHUB_TOKEN missing' };
+
+      return json({
+        REPO: env.REPO || '(not set)',
+        ALLOW_ORIGIN: env.ALLOW_ORIGIN || '(not set)',
+        GITHUB_TOKEN: env.GITHUB_TOKEN ? `set, ${env.GITHUB_TOKEN.length} chars` : '(not set)',
+        repoProbe: probe,
+        meaning: {
+          200: 'all good',
+          401: 'token is wrong or expired',
+          403: 'token lacks permission for this repo',
+          404: 'REPO name wrong, or token has no access to it',
+        },
+      }, 200, cors);
+    }
+
     if (request.method !== 'POST')
       return json({ error: 'POST only' }, 405, cors);
 
@@ -62,6 +91,10 @@ export default {
       });
 
     const results = { issue: false, csv: false };
+    const problems = [];
+
+    if (!env.GITHUB_TOKEN) problems.push('GITHUB_TOKEN not set');
+    if (!env.REPO) problems.push('REPO not set');
 
     // ---- 1. an issue, one per reply ----
     try {
@@ -82,7 +115,13 @@ export default {
         }),
       });
       results.issue = r.ok;
-    } catch { /* fall through to the csv */ }
+      if (!r.ok) {
+        const detail = await r.text().catch(() => '');
+        problems.push(`issue: ${r.status} ${detail.slice(0, 300)}`);
+      }
+    } catch (e) {
+      problems.push(`issue threw: ${String(e)}`);
+    }
 
     // ---- 2. append to a csv, so the whole list opens in a spreadsheet ----
     try {
@@ -109,10 +148,19 @@ export default {
         }),
       });
       results.csv = put.ok;
-    } catch { /* the issue may still have gone through */ }
+      if (!put.ok) {
+        const detail = await put.text().catch(() => '');
+        problems.push(`csv: ${put.status} ${detail.slice(0, 300)}`);
+      }
+    } catch (e) {
+      problems.push(`csv threw: ${String(e)}`);
+    }
 
-    if (!results.issue && !results.csv)
-      return json({ error: 'could not file rsvp' }, 502, cors);
+    if (!results.issue && !results.csv) {
+      // shows up in the live log stream, and in the response so curl reveals it
+      console.error('RSVP failed:', problems.join(' | '));
+      return json({ error: 'could not file rsvp', problems }, 502, cors);
+    }
 
     return json({ ok: true, ...results }, 200, cors);
   },
