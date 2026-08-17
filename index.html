@@ -544,10 +544,10 @@ const CONFIG = {
     { label:"1 month",   src:"photos/alisha-01mo.jpg" },
     { label:"2 months",  src:"photos/alisha-02mo.jpg" },
     { label:"3 months",  src:"photos/alisha-03mo.jpg" },
-    { label:"4 months",  src:"photos/alisha-04mo.jpg" },
+    { label:"4 months",  src:"" },
     { label:"5 months",  src:"photos/alisha-05mo.jpg" },
-    { label:"6 months",  src:"photos/alisha-06mo.jpg" },
-    { label:"7 months",  src:"photos/alisha-07mo.jpg" },
+    { label:"6 months",  src:"" },
+    { label:"7 months",  src:"" },
     { label:"8 months",  src:"photos/alisha-08mo.jpg" },
     { label:"9 months",  src:"photos/alisha-09mo.jpg" },
     { label:"10 months", src:"photos/alisha-10mo.jpg" },
@@ -578,7 +578,7 @@ const CONFIG = {
      Fallbacks if ever needed: "whatsapp", "email".
      --------------------------------------------------------------- */
   rsvpMode     : "endpoint",
-  rsvpEndpoint : "https://alisha-rsvp.daryl-c.workers.dev",
+  rsvpEndpoint : "",
 
   rsvpWhatsApp : "",
   rsvpEmail    : "rsvp@example.com",
@@ -1450,16 +1450,28 @@ function showThanks(){
           headers:{'Content-Type':'application/json'},
           body:JSON.stringify(data)
         })
-        .then(r=>{ if(!r.ok) throw new Error(r.status); return r.text(); })
+        .then(r=>r.text().then(t=>{
+          if(!r.ok) throw new Error('HTTP '+r.status+' '+t.slice(0,200));
+          return t;
+        }))
         .then(
           ()=>showThanks(),
-          ()=>{
-            /* only a genuine send failure lands here — an error thrown while
-               drawing the thank-you panel must never be reported as one */
+          err=>{
+            /* Only a genuine send failure lands here — an error thrown while
+               drawing the thank-you panel must never be reported as one.
+               The reason is logged and, in debug mode, shown on the page:
+               "failed to fetch" is CORS or a bad URL, an HTTP status is the
+               relay answering with a problem. */
+            console.error('RSVP failed:', err);
             send.disabled=false;
             send.textContent='Try again';
             const n=$('rsvpNote');
-            if(n) n.textContent='That didn\u2019t go through. Check your connection and try once more.';
+            if(n){
+              const debug = /[?&]debug/.test(location.search);
+              n.textContent = debug
+                ? String(err && err.message || err)
+                : 'That didn\u2019t go through. Please try once more, or message the family directly.';
+            }
           }
         );
         break;
